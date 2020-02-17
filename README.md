@@ -1,4 +1,4 @@
-[![Release](https://jitpack.io/v/djrain/EastarLog.svg)](https://jitpack.io/#djrain/EastarLog)
+[![Release](https://jitpack.io/v/eastar-dev/EastarLog2.svg)](https://jitpack.io/#eastar-dev/EastarLog2)
 
 ## What different EastarLog2?
 
@@ -16,7 +16,7 @@ just replace all 'import android.util.Log;' -> 'import android.log.Log;' just it
 ```java
 	public static boolean LOG = BuildConfig.DEBUG;
 ```
-https://github.com/djrain/log/blob/master/log/src/main/java/android/log/Log.java#L73
+https://github.com/eastar-dev/log/blob/master/log/src/main/java/android/log/Log.java#L73
 
 
 
@@ -43,7 +43,7 @@ allprojects {
 #### Add the dependency
 ```javascript
 dependencies {
-        implementation 'com.github.djrain:EastarLog:4.0.0'
+        implementation 'com.github.eastar-dev:EastarLog2:2.0.0'
 }
 ```
 
