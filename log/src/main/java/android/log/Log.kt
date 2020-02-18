@@ -330,7 +330,7 @@ object Log {
                     it is JSONObject -> it.toString(2)
                     it is JSONArray -> it.toString(2)
                     it is CharSequence -> _DUMP(it.toString())
-                    it.javaClass.isArray -> (it as Array<*>).contentToString()
+                    it is ByteArray -> it.joinToString("") { "%02X".format(it) }
                     else -> it.toString()
                 }
             }.getOrDefault("")
