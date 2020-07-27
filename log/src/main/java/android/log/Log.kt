@@ -262,6 +262,7 @@ object Log {
     }
 
     private var timeout: Long = 0
+
     @JvmStatic
     fun debounce(vararg args: Any?) {
         if (!LOG) return
@@ -319,19 +320,21 @@ object Log {
 
         return args.joinToString {
             runCatching {
-                when {
-                    it == null -> "null"
-                    it is Class<*> -> _DUMP(it)
-                    it is View -> _DUMP(it)
-                    it is Intent -> _DUMP(it)
-                    it is Bundle -> _DUMP(it)
-                    it is Throwable -> _DUMP(it)
-                    it is Method -> _DUMP(it)
-                    it is JSONObject -> it.toString(2)
-                    it is JSONArray -> it.toString(2)
-                    it is CharSequence -> _DUMP(it.toString())
-                    it is ByteArray -> it.joinToString("") { "%02X".format(it) }
-                    else -> it.toString()
+                when (it) {
+                    //@formatter:off
+                    null            -> "null"
+                    is Class<*>     -> _DUMP(it)
+                    is View         -> _DUMP(it)
+                    is Intent       -> _DUMP(it)
+                    is Bundle       -> _DUMP(it)
+                    is Throwable    -> _DUMP(it)
+                    is Method       -> _DUMP(it)
+                    is JSONObject   -> it.toString(2)
+                    is JSONArray    -> it.toString(2)
+                    is CharSequence -> _DUMP(it.toString())
+                    is ByteArray    -> it.joinToString("") { "%02X".format(it) }
+                    else            -> it.toString()
+                    //@formatter:on
                 }
             }.getOrDefault("")
         }
@@ -440,9 +443,9 @@ object Log {
 
     @JvmStatic
     fun _toByteArray(hexString: String): ByteArray = hexString.zipWithNext { a, b -> "$a$b" }
-            .filterIndexed { index, _ -> index % 2 == 0 }
-            .map { it.toInt(16).toByte() }
-            .toByteArray()
+        .filterIndexed { index, _ -> index % 2 == 0 }
+        .map { it.toInt(16).toByte() }
+        .toByteArray()
 
     @JvmStatic
     fun _DUMP_object(o: Any?): String {
@@ -473,13 +476,13 @@ object Log {
              //@formatter:on
             } else if (value.javaClass.isPrimitive //
 //					|| (value.getClass().getMethod("toString").getDeclaringClass() != Object.class)// toString이 정의된경우만
-                    || value.javaClass.isEnum //
-                    || value is Rect //
-                    || value is RectF //
-                    || value is Point //
-                    || value is Number //
-                    || value is Boolean //
-                    || value is CharSequence) //
+                || value.javaClass.isEnum //
+                || value is Rect //
+                || value is RectF //
+                || value is Point //
+                || value is Number //
+                || value is Boolean //
+                || value is CharSequence) //
             {
                 sb.append(name).append('<').append(value.javaClass.simpleName).append('>').append(" = ")
                 sb.append(value.toString())
@@ -564,11 +567,11 @@ object Log {
     }
 
     @JvmStatic
-    fun tic(vararg args: String) {
+    fun tic(vararg args: Any?) {
         if (!LOG) return
         val e = System.nanoTime()
         val s = SEED_S
-        e(String.format(Locale.getDefault(), "%,25d", e - s), args)
+        e(String.format(Locale.getDefault(), "%,25d", e - s), _MESSAGE(*args))
         SEED_S = e
     }
 
@@ -641,6 +644,7 @@ object Log {
     }
 
     private var LAST_ACTION_MOVE: Long = 0
+
     @JvmStatic
     fun onTouchEvent(event: MotionEvent) {
         if (!LOG) return
@@ -689,6 +693,7 @@ object Log {
 
         private class XmlFormatter(private val indentNumChars: Int, private val lineLength: Int) {
             private var singleLine = false
+
             @Synchronized
             fun format(s: String, initialIndent: Int): String {
                 var indent = initialIndent
