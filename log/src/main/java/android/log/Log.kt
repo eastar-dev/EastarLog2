@@ -310,7 +310,7 @@ object Log {
         if (clz.isMemberClass                             ) i("isMemberClass        ", clz.isMemberClass     )
         if (clz.isPrimitive                               ) i("isPrimitive          ", clz.isPrimitive       )
         if (clz.isSynthetic                               ) i("isSynthetic          ", clz.isSynthetic       )
-         //@formatter:on
+        //@formatter:on
     }
 
     /** dump */
@@ -425,7 +425,7 @@ object Log {
         sb.append(if (intent.`package`    != null)(if (sb.isNotEmpty())"\n" else "") + "Package    " + intent.`package`            .toString() else "")
         sb.append(if (intent.component    != null)(if (sb.isNotEmpty())"\n" else "") + "Component  " + intent.component            .toString() else "")
         sb.append(if (intent.flags        != 0x00)(if (sb.isNotEmpty())"\n" else "") + "Flags      " + Integer.toHexString(intent.flags) else "")
-         //@formatter:on
+        //@formatter:on
         if (intent.extras != null) sb.append((if (sb.isNotEmpty()) "\n" else "") + _DUMP(intent.extras))
         return sb.toString()
     }
@@ -461,19 +461,19 @@ object Log {
             if (value.javaClass.isArray) {
                 sb.append(name).append('<').append(value.javaClass.simpleName).append('>').append(" = ")
                 //@formatter:off
-                  val  componentType = value.javaClass.componentType
+                val  componentType = value.javaClass.componentType
                 when {
                     Boolean::class.javaPrimitiveType!!.isAssignableFrom(componentType!!) -> sb.append(Arrays.toString(value as BooleanArray?))
-                    Byte::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(if ((value as ByteArray).size < MAX_LOG_LINE_BYTE_SIZE)String((value as ByteArray?)!!) else "[" + value.size + "]")
-                    Char::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(String((value as CharArray?)!!))
-                    Double::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(Arrays.toString(value as DoubleArray?))
-                    Float::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(Arrays.toString(value as FloatArray?))
-                    Int::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(Arrays.toString(value as IntArray?))
-                    Long::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(Arrays.toString(value as LongArray?))
-                    Short::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(Arrays.toString(value as ShortArray?))
+                    Byte   ::class.javaPrimitiveType!!.isAssignableFrom(componentType)   -> sb.append(if ((value as ByteArray).size < MAX_LOG_LINE_BYTE_SIZE)String((value as ByteArray?)!!) else "[" + value.size + "]")
+                    Char   ::class.javaPrimitiveType!!.isAssignableFrom(componentType)   -> sb.append(String((value as CharArray?)!!))
+                    Double ::class.javaPrimitiveType!!.isAssignableFrom(componentType)   -> sb.append(Arrays.toString(value as DoubleArray?))
+                    Float  ::class.javaPrimitiveType!!.isAssignableFrom(componentType)   -> sb.append(Arrays.toString(value as FloatArray?))
+                    Int    ::class.javaPrimitiveType!!.isAssignableFrom(componentType)   -> sb.append(Arrays.toString(value as IntArray?))
+                    Long   ::class.javaPrimitiveType!!.isAssignableFrom(componentType)   -> sb.append(Arrays.toString(value as LongArray?))
+                    Short  ::class.javaPrimitiveType!!.isAssignableFrom(componentType)   -> sb.append(Arrays.toString(value as ShortArray?))
                     else -> sb.append((value as Array<*>).contentToString())
                 }
-             //@formatter:on
+                //@formatter:on
             } else if (value.javaClass.isPrimitive //
 //					|| (value.getClass().getMethod("toString").getDeclaringClass() != Object.class)// toString이 정의된경우만
                 || value.javaClass.isEnum //
@@ -482,7 +482,8 @@ object Log {
                 || value is Point //
                 || value is Number //
                 || value is Boolean //
-                || value is CharSequence) //
+                || value is CharSequence
+            ) //
             {
                 sb.append(name).append('<').append(value.javaClass.simpleName).append('>').append(" = ")
                 sb.append(value.toString())
@@ -526,6 +527,20 @@ object Log {
         }
     }
 
+    var SEED_S = 0L
+
+    @JvmStatic
+    fun tic(vararg args: Any? = arrayOf("")) {
+        if (!LOG) return
+        synchronized(this) {
+            val e = System.currentTimeMillis()
+            val s = SEED_S
+            val interval = if (SEED_S == 0L) 0L else e - s
+            SEED_S = e
+            e(String.format(Locale.getDefault(), "%,15d", interval), _MESSAGE(*args))
+        }
+    }
+
     private fun cursor(c: Cursor?) {
         c ?: return
         e("<${c.count}>")
@@ -545,34 +560,6 @@ object Log {
             }
             c.moveToPosition(keep)
         }
-    }
-
-    //tic
-    private var SEED_S: Long = 0L
-
-    @JvmStatic
-    fun tic_s() {
-        if (!LOG) return
-        val e = System.nanoTime()
-        SEED_S = e
-    }
-
-    @JvmStatic
-    fun tic() {
-        if (!LOG) return
-        val e = System.nanoTime()
-        val s = SEED_S
-        e(String.format(Locale.getDefault(), "%,25d", e - s))
-        SEED_S = e
-    }
-
-    @JvmStatic
-    fun tic(vararg args: Any?) {
-        if (!LOG) return
-        val e = System.nanoTime()
-        val s = SEED_S
-        e(String.format(Locale.getDefault(), "%,25d", e - s), _MESSAGE(*args))
-        SEED_S = e
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
