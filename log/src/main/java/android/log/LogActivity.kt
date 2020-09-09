@@ -17,8 +17,8 @@ abstract class LogActivity : AppCompatActivity() {
         super.sendBroadcast(intent)
     }
 
-    override fun startActivities(vararg intents: Intent) {
-        Log.pc(Log.ERROR, "startActivities", "▶▶", javaClass, intents.forEach { it.component?.shortClassName ?: it.toUri(0) }, intents)
+    override fun startActivities(intents: Array<out Intent>?) {
+        Log.pc(Log.ERROR, "startActivities", "▶▶", javaClass, intents?.forEach { it.component?.shortClassName ?: it.toUri(0) }, intents)
         super.startActivities(intents)
     }
 
