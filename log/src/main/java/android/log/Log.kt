@@ -66,10 +66,16 @@ object Log {
 
     private var LOG_PASS_REGEX = "^android\\..+|^com\\.android\\..+|^java\\..+".toRegex()
 
-    private fun getLocator(info: StackTraceElement): String = "(%s:%d)".format(info.fileName, info.lineNumber)
+    private fun getLocator(info: StackTraceElement): String =
+        "(%s:%d)".format(info.fileName, info.lineNumber)
 
     private fun getTag(info: StackTraceElement): String = runCatching {
-        (info.className.takeLastWhile { it != '.' } + "." + info.methodName).run { replace("\\$".toRegex(), "_") }
+        (info.className.takeLastWhile { it != '.' } + "." + info.methodName).run {
+            replace(
+                "\\$".toRegex(),
+                "_"
+            )
+        }
     }.getOrDefault(info.methodName)
 
     private fun getStack(): StackTraceElement {
@@ -101,7 +107,9 @@ object Log {
     private fun safeCut(byteArray: ByteArray, startOffset: Int): Int {
         val byteLength = byteArray.size
         if (byteLength <= startOffset) throw ArrayIndexOutOfBoundsException("!!text_length <= start_byte_index")
-        if (byteArray[startOffset] and 0xc0.toByte() == 0x80.toByte()) throw java.lang.UnsupportedOperationException("!!start_byte_index must splited index")
+        if (byteArray[startOffset] and 0xc0.toByte() == 0x80.toByte()) throw java.lang.UnsupportedOperationException(
+            "!!start_byte_index must splited index"
+        )
 
         var position = startOffset + MAX_LOG_LINE_BYTE_SIZE
         if (byteLength <= position) return byteLength - startOffset
@@ -148,23 +156,28 @@ object Log {
             }
         }
         if (OUTPUT_CHANNEL == Channel.STUDIO) {
-            val dots = "...................................................................................."
+            val dots =
+                "...................................................................................."
             val sb = StringBuilder(dots)
             dots.intern()
-            val lastTag = tag.substring((tag.length + locator.length - dots.length).coerceAtLeast(0))
+            val lastTag =
+                tag.substring((tag.length + locator.length - dots.length).coerceAtLeast(0))
             sb.replace(0, lastTag.length, lastTag)
             sb.replace(sb.length - locator.length, sb.length, locator)
             val adjTag = sb.toString()
             when (sa.size) {
                 0 -> android.util.Log.println(priority, adjTag, PREFIX)
                 1 -> android.util.Log.println(priority, adjTag, sa[0])
-                else -> android.util.Log.println(priority, adjTag, PREFIX_MULTILINE).run { sa.forEach { android.util.Log.println(priority, adjTag, it) } }
+                else -> android.util.Log.println(priority, adjTag, PREFIX_MULTILINE)
+                    .run { sa.forEach { android.util.Log.println(priority, adjTag, it) } }
             }
         }
         if (OUTPUT_CHANNEL == Channel.SYSTEM) {
-            val dots = "...................................................................................."
+            val dots =
+                "...................................................................................."
             val sb = StringBuilder(dots)
-            val lastTag = tag.substring((tag.length + locator.length - dots.length).coerceAtLeast(0))
+            val lastTag =
+                tag.substring((tag.length + locator.length - dots.length).coerceAtLeast(0))
             sb.replace(0, lastTag.length, lastTag)
             sb.replace(sb.length - locator.length, sb.length, locator)
             val adjTag = sb.toString()
@@ -210,6 +223,11 @@ object Log {
     fun v(vararg args: Any?) {
         if (!LOG) return
         p(VERBOSE, *args)
+    }
+
+    @JvmStatic
+    fun println(priority: Int, tag: String?, msg: String) {
+        p(priority, tag, msg)
     }
 
     @JvmStatic
@@ -291,25 +309,25 @@ object Log {
         if (!LOG) return
         e(clz)
         //@formatter:off
-        i("getName              " , clz.name)
-        i("getPackage           " , clz.`package`)
-        i("getCanonicalName     " , clz.canonicalName)
-        i("getDeclaredClasses   " , clz.declaredClasses.contentToString())
-        i("getClasses           " , clz.classes.contentToString())
-        i("getSigners           " , clz.signers?.contentToString())
-        i("getEnumConstants     " , clz.enumConstants?.contentToString())
-        i("getTypeParameters    " , clz.typeParameters.contentToString())
-        i("getGenericInterfaces " , clz.genericInterfaces.contentToString())
-        i("getInterfaces        " , clz.interfaces.contentToString())
-        if (clz.isAnnotation                              ) i("isAnnotation         ", clz.isAnnotation      )
-        if (clz.isAnonymousClass                          ) i("isAnonymousClass     ", clz.isAnonymousClass  )
-        if (clz.isArray                                   ) i("isArray              ", clz.isArray           )
-        if (clz.isEnum                                    ) i("isEnum               ", clz.isEnum            )
-        if (clz.isInterface                               ) i("isInterface          ", clz.isInterface       )
-        if (clz.isLocalClass                              ) i("isLocalClass         ", clz.isLocalClass      )
-        if (clz.isMemberClass                             ) i("isMemberClass        ", clz.isMemberClass     )
-        if (clz.isPrimitive                               ) i("isPrimitive          ", clz.isPrimitive       )
-        if (clz.isSynthetic                               ) i("isSynthetic          ", clz.isSynthetic       )
+        i("getName              ", clz.name)
+        i("getPackage           ", clz.`package`)
+        i("getCanonicalName     ", clz.canonicalName)
+        i("getDeclaredClasses   ", clz.declaredClasses.contentToString())
+        i("getClasses           ", clz.classes.contentToString())
+        i("getSigners           ", clz.signers?.contentToString())
+        i("getEnumConstants     ", clz.enumConstants?.contentToString())
+        i("getTypeParameters    ", clz.typeParameters.contentToString())
+        i("getGenericInterfaces ", clz.genericInterfaces.contentToString())
+        i("getInterfaces        ", clz.interfaces.contentToString())
+        if (clz.isAnnotation) i("isAnnotation         ", clz.isAnnotation)
+        if (clz.isAnonymousClass) i("isAnonymousClass     ", clz.isAnonymousClass)
+        if (clz.isArray) i("isArray              ", clz.isArray)
+        if (clz.isEnum) i("isEnum               ", clz.isEnum)
+        if (clz.isInterface) i("isInterface          ", clz.isInterface)
+        if (clz.isLocalClass) i("isLocalClass         ", clz.isLocalClass)
+        if (clz.isMemberClass) i("isMemberClass        ", clz.isMemberClass)
+        if (clz.isPrimitive) i("isPrimitive          ", clz.isPrimitive)
+        if (clz.isSynthetic) i("isSynthetic          ", clz.isSynthetic)
         //@formatter:on
     }
 
@@ -322,18 +340,18 @@ object Log {
             runCatching {
                 when (it) {
                     //@formatter:off
-                    null            -> "null"
-                    is Class<*>     -> _DUMP(it)
-                    is View         -> _DUMP(it)
-                    is Intent       -> _DUMP(it)
-                    is Bundle       -> _DUMP(it)
-                    is Throwable    -> _DUMP(it)
-                    is Method       -> _DUMP(it)
-                    is JSONObject   -> it.toString(2)
-                    is JSONArray    -> it.toString(2)
+                    null -> "null"
+                    is Class<*> -> _DUMP(it)
+                    is View -> _DUMP(it)
+                    is Intent -> _DUMP(it)
+                    is Bundle -> _DUMP(it)
+                    is Throwable -> _DUMP(it)
+                    is Method -> _DUMP(it)
+                    is JSONObject -> it.toString(2)
+                    is JSONArray -> it.toString(2)
                     is CharSequence -> _DUMP(it.toString())
-                    is ByteArray    -> it.joinToString("") { "%02X".format(it) }
-                    else            -> it.toString()
+                    is ByteArray -> it.joinToString("") { "%02X".format(it) }
+                    else -> it.toString()
                     //@formatter:on
                 }
             }.getOrDefault("")
@@ -352,7 +370,9 @@ object Log {
     }.getOrDefault(text)
 
     private fun _DUMP(method: Method): String = method.run {
-        "$modifiers ${returnType.simpleName.padEnd(20).take(20)}${declaringClass.simpleName}.$name(${parameterTypes.joinToString { it.simpleName }})"
+        "$modifiers ${
+            returnType.simpleName.padEnd(20).take(20)
+        }${declaringClass.simpleName}.$name(${parameterTypes.joinToString { it.simpleName }})"
     }
 
     private fun _DUMP(v: View, depth: Int = 0): String {
@@ -360,9 +380,18 @@ object Log {
         val out = StringBuilder(128)
         out.append(space)
         when (v) {
-            is WebView -> out.insert(depth, "W:" + Integer.toHexString(System.identityHashCode(v)) + ":" + v.title)
-            is TextView -> out.insert(depth, "T:" + Integer.toHexString(System.identityHashCode(v)) + ":" + v.text)
-            else -> out.insert(depth, "N:" + Integer.toHexString(System.identityHashCode(v)) + ":" + v.javaClass.simpleName)
+            is WebView -> out.insert(
+                depth,
+                "W:" + Integer.toHexString(System.identityHashCode(v)) + ":" + v.title
+            )
+            is TextView -> out.insert(
+                depth,
+                "T:" + Integer.toHexString(System.identityHashCode(v)) + ":" + v.text
+            )
+            else -> out.insert(
+                depth,
+                "N:" + Integer.toHexString(System.identityHashCode(v)) + ":" + v.javaClass.simpleName
+            )
         }
         out.setLength(space.length)
         val id = v.id
@@ -404,12 +433,18 @@ object Log {
         //		return uri.toString();
         val sb = StringBuilder()
         sb.append("\r\n Uri                       ").append(uri.toString())
-        sb.append("\r\n Scheme                    ").append(if (uri.scheme != null) uri.scheme else "null")
-        sb.append("\r\n Host                      ").append(if (uri.host != null) uri.host else "null")
-        sb.append("\r\n Path                      ").append(if (uri.path != null) uri.path else "null")
-        sb.append("\r\n LastPathSegment           ").append(if (uri.lastPathSegment != null) uri.lastPathSegment else "null")
-        sb.append("\r\n Query                     ").append(if (uri.query != null) uri.query else "null")
-        sb.append("\r\n Fragment                  ").append(if (uri.fragment != null) uri.fragment else "null")
+        sb.append("\r\n Scheme                    ")
+            .append(if (uri.scheme != null) uri.scheme else "null")
+        sb.append("\r\n Host                      ")
+            .append(if (uri.host != null) uri.host else "null")
+        sb.append("\r\n Path                      ")
+            .append(if (uri.path != null) uri.path else "null")
+        sb.append("\r\n LastPathSegment           ")
+            .append(if (uri.lastPathSegment != null) uri.lastPathSegment else "null")
+        sb.append("\r\n Query                     ")
+            .append(if (uri.query != null) uri.query else "null")
+        sb.append("\r\n Fragment                  ")
+            .append(if (uri.fragment != null) uri.fragment else "null")
         return sb.toString()
     }
 
@@ -417,14 +452,18 @@ object Log {
         if (intent == null) return "null_Intent"
         val sb = StringBuilder()
         //@formatter:off
-        sb.append(if (intent.action       != null)(if (sb.isNotEmpty())"\n" else "") + "Action     " + intent.action               .toString() else "")
-        sb.append(if (intent.data         != null)(if (sb.isNotEmpty())"\n" else "") + "Data       " + intent.data                 .toString() else "")
-        sb.append(if (intent.categories   != null)(if (sb.isNotEmpty())"\n" else "") + "Categories " + intent.categories           .toString() else "")
-        sb.append(if (intent.type         != null)(if (sb.isNotEmpty())"\n" else "") + "Type       " + intent.type                 .toString() else "")
-        sb.append(if (intent.scheme       != null)(if (sb.isNotEmpty())"\n" else "") + "Scheme     " + intent.scheme               .toString() else "")
-        sb.append(if (intent.`package`    != null)(if (sb.isNotEmpty())"\n" else "") + "Package    " + intent.`package`            .toString() else "")
-        sb.append(if (intent.component    != null)(if (sb.isNotEmpty())"\n" else "") + "Component  " + intent.component            .toString() else "")
-        sb.append(if (intent.flags        != 0x00)(if (sb.isNotEmpty())"\n" else "") + "Flags      " + Integer.toHexString(intent.flags) else "")
+        sb.append(if (intent.action != null) (if (sb.isNotEmpty()) "\n" else "") + "Action     " + intent.action.toString() else "")
+        sb.append(if (intent.data != null) (if (sb.isNotEmpty()) "\n" else "") + "Data       " + intent.data.toString() else "")
+        sb.append(if (intent.categories != null) (if (sb.isNotEmpty()) "\n" else "") + "Categories " + intent.categories.toString() else "")
+        sb.append(if (intent.type != null) (if (sb.isNotEmpty()) "\n" else "") + "Type       " + intent.type.toString() else "")
+        sb.append(if (intent.scheme != null) (if (sb.isNotEmpty()) "\n" else "") + "Scheme     " + intent.scheme.toString() else "")
+        sb.append(if (intent.`package` != null) (if (sb.isNotEmpty()) "\n" else "") + "Package    " + intent.`package`.toString() else "")
+        sb.append(if (intent.component != null) (if (sb.isNotEmpty()) "\n" else "") + "Component  " + intent.component.toString() else "")
+        sb.append(
+            if (intent.flags != 0x00) (if (sb.isNotEmpty()) "\n" else "") + "Flags      " + Integer.toHexString(
+                intent.flags
+            ) else ""
+        )
         //@formatter:on
         if (intent.extras != null) sb.append((if (sb.isNotEmpty()) "\n" else "") + _DUMP(intent.extras))
         return sb.toString()
@@ -439,7 +478,8 @@ object Log {
     }
 
     @JvmStatic
-    fun _toHexString(byteArray: ByteArray?): String = byteArray?.joinToString("") { "%02x".format(it) } ?: "!!byte[]"
+    fun _toHexString(byteArray: ByteArray?): String =
+        byteArray?.joinToString("") { "%02x".format(it) } ?: "!!byte[]"
 
     @JvmStatic
     fun _toByteArray(hexString: String): ByteArray = hexString.zipWithNext { a, b -> "$a$b" }
@@ -459,18 +499,37 @@ object Log {
                 return "null"
 
             if (value.javaClass.isArray) {
-                sb.append(name).append('<').append(value.javaClass.simpleName).append('>').append(" = ")
+                sb.append(name).append('<').append(value.javaClass.simpleName).append('>')
+                    .append(" = ")
                 //@formatter:off
-                val  componentType = value.javaClass.componentType
+                val componentType = value.javaClass.componentType
                 when {
-                    Boolean::class.javaPrimitiveType!!.isAssignableFrom(componentType!!) -> sb.append(Arrays.toString(value as BooleanArray?))
-                    Byte   ::class.javaPrimitiveType!!.isAssignableFrom(componentType)   -> sb.append(if ((value as ByteArray).size < MAX_LOG_LINE_BYTE_SIZE)String((value as ByteArray?)!!) else "[" + value.size + "]")
-                    Char   ::class.javaPrimitiveType!!.isAssignableFrom(componentType)   -> sb.append(String((value as CharArray?)!!))
-                    Double ::class.javaPrimitiveType!!.isAssignableFrom(componentType)   -> sb.append(Arrays.toString(value as DoubleArray?))
-                    Float  ::class.javaPrimitiveType!!.isAssignableFrom(componentType)   -> sb.append(Arrays.toString(value as FloatArray?))
-                    Int    ::class.javaPrimitiveType!!.isAssignableFrom(componentType)   -> sb.append(Arrays.toString(value as IntArray?))
-                    Long   ::class.javaPrimitiveType!!.isAssignableFrom(componentType)   -> sb.append(Arrays.toString(value as LongArray?))
-                    Short  ::class.javaPrimitiveType!!.isAssignableFrom(componentType)   -> sb.append(Arrays.toString(value as ShortArray?))
+                    Boolean::class.javaPrimitiveType!!.isAssignableFrom(componentType!!) -> sb.append(
+                        Arrays.toString(value as BooleanArray?)
+                    )
+                    Byte::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(
+                        if ((value as ByteArray).size < MAX_LOG_LINE_BYTE_SIZE) String(
+                            (value as ByteArray?)!!
+                        ) else "[" + value.size + "]"
+                    )
+                    Char::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(
+                        String((value as CharArray?)!!)
+                    )
+                    Double::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(
+                        Arrays.toString(value as DoubleArray?)
+                    )
+                    Float::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(
+                        Arrays.toString(value as FloatArray?)
+                    )
+                    Int::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(
+                        Arrays.toString(value as IntArray?)
+                    )
+                    Long::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(
+                        Arrays.toString(value as LongArray?)
+                    )
+                    Short::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(
+                        Arrays.toString(value as ShortArray?)
+                    )
                     else -> sb.append((value as Array<*>).contentToString())
                 }
                 //@formatter:on
@@ -485,22 +544,32 @@ object Log {
                 || value is CharSequence
             ) //
             {
-                sb.append(name).append('<').append(value.javaClass.simpleName).append('>').append(" = ")
+                sb.append(name).append('<').append(value.javaClass.simpleName).append('>')
+                    .append(" = ")
                 sb.append(value.toString())
             } else {
                 if (duplication.contains(value)) {
-                    sb.append(name).append('<').append(value.javaClass.simpleName).append('>').append(" = ")
+                    sb.append(name).append('<').append(value.javaClass.simpleName).append('>')
+                        .append(" = ")
                     sb.append("[duplication]\n")
                     return sb.toString()
                 }
                 duplication.add(value)
                 if (value is Collection<*>) {
-                    sb.append(name).append('<').append(value.javaClass.simpleName).append('>').append(" = ").append(":\n")
+                    sb.append(name).append('<').append(value.javaClass.simpleName).append('>')
+                        .append(" = ").append(":\n")
                     val it = value.iterator()
-                    while (it.hasNext()) sb.append(_DUMP_object("  $name[item]", it.next(), duplication))
+                    while (it.hasNext()) sb.append(
+                        _DUMP_object(
+                            "  $name[item]",
+                            it.next(),
+                            duplication
+                        )
+                    )
                 } else {
                     val clz: Class<*> = value.javaClass
-                    sb.append(name).append('<').append(value.javaClass.simpleName).append('>').append(" = ").append(":\n")
+                    sb.append(name).append('<').append(value.javaClass.simpleName).append('>')
+                        .append(" = ").append(":\n")
                     for (f in clz.declaredFields) {
                         f.isAccessible = true
                         sb.append(_DUMP_object("  " + name + "." + f.name, f[value], duplication))
@@ -574,7 +643,8 @@ object Log {
                 it.canWrite()
                 val f = File(it, timeText + "_" + name + ".jpg")
                 FileOutputStream(f).use { stream ->
-                    BitmapFactory.decodeByteArray(data, 0, data.size).compress(CompressFormat.JPEG, 100, stream)
+                    BitmapFactory.decodeByteArray(data, 0, data.size)
+                        .compress(CompressFormat.JPEG, 100, stream)
                 }
             }
         }
@@ -595,7 +665,11 @@ object Log {
         }
     }
 
-    private val timeText: String get() = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.ENGLISH).format(Date())
+    private val timeText: String
+        get() = SimpleDateFormat(
+            "yyyyMMdd_HHmmss_SSS",
+            Locale.ENGLISH
+        ).format(Date())
 
     //flog
     @JvmStatic
@@ -606,7 +680,11 @@ object Log {
             val log: String = _MESSAGE(*args)
             val st = StringTokenizer(log, LF, false)
 
-            val tag = "%-40s%-40d %-100s ``".format(Date().toString(), SystemClock.elapsedRealtime(), info.toString())
+            val tag = "%-40s%-40d %-100s ``".format(
+                Date().toString(),
+                SystemClock.elapsedRealtime(),
+                info.toString()
+            )
             if (st.hasMoreTokens()) {
                 val token = st.nextToken()
                 FILE_LOG!!.appendText(tag + token + LF)
@@ -707,9 +785,18 @@ object Log {
                                 val textBetweenElements = s.substring(i + 1, nextStartElementPos)
                                 // If the space between elements is solely newlines, let them through to preserve additional newlines in source document.
                                 when {
-                                    textBetweenElements.replace("\n".toRegex(), "").isEmpty() -> sb.append(textBetweenElements + "\n")
-                                    textBetweenElements.length <= lineLength * 0.5 -> sb.append(textBetweenElements).also { singleLine = true }
-                                    else -> sb.append("\n" + lineWrap(textBetweenElements, lineLength, indent) + "\n")
+                                    textBetweenElements.replace("\n".toRegex(), "")
+                                        .isEmpty() -> sb.append(textBetweenElements + "\n")
+                                    textBetweenElements.length <= lineLength * 0.5 -> sb.append(
+                                        textBetweenElements
+                                    ).also { singleLine = true }
+                                    else -> sb.append(
+                                        "\n" + lineWrap(
+                                            textBetweenElements,
+                                            lineLength,
+                                            indent
+                                        ) + "\n"
+                                    )
                                 }
                                 i = nextStartElementPos - 1
                             } else {
