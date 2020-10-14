@@ -48,6 +48,9 @@ object Log {
     fun println(priority: Int, tag: String, locator: String, msg: String?) = Unit
 
     @JvmStatic
+    fun println(priority: Int, tag: String?, msg: String) = Unit
+
+    @JvmStatic
     fun a(vararg args: Any?) = Unit
 
     @JvmStatic

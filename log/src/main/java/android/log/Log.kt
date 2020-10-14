@@ -227,6 +227,7 @@ object Log {
 
     @JvmStatic
     fun println(priority: Int, tag: String?, msg: String) {
+        if (!LOG) return
         p(priority, tag, msg)
     }
 
