@@ -45,6 +45,8 @@ import kotlin.collections.ArrayList
 import kotlin.collections.HashSet
 import kotlin.experimental.and
 
+typealias OutputChannel = Log.Channel
+
 /** @author eastar*/
 object Log {
     const val VERBOSE = android.util.Log.VERBOSE
@@ -56,6 +58,10 @@ object Log {
     var LOG = true
     var FILE_LOG: File? = null
     var OUTPUT_CHANNEL = Channel.STUDIO
+
+    fun outputSystem() {
+        OUTPUT_CHANNEL = Channel.SYSTEM
+    }
 
     enum class Channel { STUDIO, SYSTEM }
 

@@ -38,6 +38,8 @@ object Log {
 
     enum class Channel { STUDIO, SYSTEM }
 
+    fun outputSystem() = Unit
+
     @JvmStatic
     fun p(priority: Int, vararg args: Any?) = Unit
 
