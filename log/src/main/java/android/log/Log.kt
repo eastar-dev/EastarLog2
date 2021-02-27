@@ -38,6 +38,7 @@ import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import java.lang.reflect.Method
+import java.nio.charset.Charset
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -76,7 +77,8 @@ object Log {
         "(%s:%d)".format(info.fileName, info.lineNumber)
 
     private fun getTag(info: StackTraceElement): String = runCatching {
-        (info.className.takeLastWhile { it != '.' } + "." + info.methodName).run {
+        //(info.className.takeLastWhile { it != '.' } + "." + info.methodName).run {
+        (info.className.takeLastWhile { it != '.' }).run {
             replace(
                 "\\$".toRegex(),
                 "_"
@@ -147,6 +149,9 @@ object Log {
         return println(priority, tag, locator, msg)
     }
 
+    val String.lengthEuckr get() = toByteArray(Charset.forName("euc-kr")).size
+
+
     @JvmStatic
     fun println(priority: Int, tag: String, locator: String, msg: String?) {
         if (!LOG) return
@@ -162,35 +167,38 @@ object Log {
             }
         }
         if (OUTPUT_CHANNEL == Channel.STUDIO) {
-            val dots =
-                "...................................................................................."
+            val dots = "...................................................................................."
             val sb = StringBuilder(dots)
-            dots.intern()
-            val lastTag =
-                tag.substring((tag.length + locator.length - dots.length).coerceAtLeast(0))
+
+            val lastTag = tag.substring((tag.length + locator.length - dots.length).coerceAtLeast(0))
             sb.replace(0, lastTag.length, lastTag)
             sb.replace(sb.length - locator.length, sb.length, locator)
             val adjTag = sb.toString()
             when (sa.size) {
                 0 -> android.util.Log.println(priority, adjTag, PREFIX)
                 1 -> android.util.Log.println(priority, adjTag, sa[0])
-                else -> android.util.Log.println(priority, adjTag, PREFIX_MULTILINE)
-                    .run { sa.forEach { android.util.Log.println(priority, adjTag, it) } }
+                else -> android.util.Log.println(priority, adjTag, PREFIX_MULTILINE).run {
+                    sa.forEach {
+                        android.util.Log.println(priority, adjTag, it)
+                    }
+                }
             }
         }
         if (OUTPUT_CHANNEL == Channel.SYSTEM) {
-            val dots =
-                "...................................................................................."
+            val dots = "...................................................................................."
             val sb = StringBuilder(dots)
-            val lastTag =
-                tag.substring((tag.length + locator.length - dots.length).coerceAtLeast(0))
+            val lastTag = tag.substring((tag.length + locator.length - dots.length).coerceAtLeast(0))
             sb.replace(0, lastTag.length, lastTag)
             sb.replace(sb.length - locator.length, sb.length, locator)
             val adjTag = sb.toString()
             when (sa.size) {
                 0 -> println(adjTag + PREFIX)
                 1 -> println(adjTag + sa[0])
-                else -> println(adjTag + PREFIX_MULTILINE).run { repeat(sa.size) { println(adjTag + it) } }
+                else -> println(adjTag + PREFIX_MULTILINE).run {
+                    sa.forEach {
+                        println(adjTag + it)
+                    }
+                }
             }
         }
     }
