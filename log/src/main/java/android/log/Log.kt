@@ -64,18 +64,12 @@ object Log {
 
     private var LOG_PASS_REGEX = "^android\\..+|^com\\.android\\..+|^java\\..+".toRegex()
 
-    private fun getLocator(info: StackTraceElement): String =
-        "(%s:%d)".format(info.fileName, info.lineNumber)
+    private fun getLocator(info: StackTraceElement) = ".(%s:%d)".format(info.fileName, info.lineNumber)
 
     private fun getTag(info: StackTraceElement): String = runCatching {
-        //(info.className.takeLastWhile { it != '.' } + "." + info.methodName).run {
-        (info.className.takeLastWhile { it != '.' }).run {
-            replace(
-                "\\$".toRegex(),
-                "_"
-            )
-        }
-    }.getOrDefault(info.methodName)
+        //info.className.takeLastWhile { it != '.' } + "." + info.methodName
+        info.className.takeLastWhile { it != '.' }.replace('$', '.')
+    }.getOrDefault(info.className)
 
     private fun getStack(): StackTraceElement {
         return Exception().stackTrace.filterNot {
@@ -321,7 +315,7 @@ object Log {
     /** dump */
     private fun _MESSAGE(vararg args: Any?): String {
         if (args.isNullOrEmpty())
-            return "null[]"
+            return ""
 
         return args.joinToString {
             runCatching {
