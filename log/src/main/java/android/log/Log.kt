@@ -716,3 +716,6 @@ object Log {
 
     class TraceLog : Throwable()
 }
+
+val String?.singleLog: String
+    get() = this?.take(3600)?.trim()?.replace('\n', '↙') ?: ""
