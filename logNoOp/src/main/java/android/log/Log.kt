@@ -34,9 +34,6 @@ object Log {
     const val ASSERT = android.util.Log.ASSERT
     var LOG = false
     var FILE_LOG: File? = null
-    var OUTPUT_CHANNEL = Channel.STUDIO
-
-    enum class Channel { STUDIO, SYSTEM }
 
     fun outputSystem() = Unit
 
