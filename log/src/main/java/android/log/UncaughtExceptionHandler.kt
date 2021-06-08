@@ -16,7 +16,7 @@ import java.lang.ref.WeakReference
 import java.text.SimpleDateFormat
 import java.util.*
 
-class UncaughtExceptionHandler(context: Context, actor: ((Array<out File>) -> Unit)? = null) {
+class UncaughtExceptionHandler(context: Context, actor: ((Array<File>) -> Unit)? = null) {
     var path: String = "temp"
     var timeFormatter: String = "yyyyMMdd-HHmmss"
     var versionTag: String = "v"
@@ -29,7 +29,7 @@ class UncaughtExceptionHandler(context: Context, actor: ((Array<out File>) -> Un
             uncaughtStackTraceText(context, uncaughtExceptionFilename, it)
         }
 
-        File(context.getExternalFilesDir(null), path).listFiles()?.let {
+        File(context.externalCacheDir, path).listFiles()?.let {
             actor?.invoke(it)
             it.forEach { file ->
                 file.deleteRecursively()
