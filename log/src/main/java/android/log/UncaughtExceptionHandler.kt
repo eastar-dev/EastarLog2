@@ -29,11 +29,14 @@ class UncaughtExceptionHandler(context: Context, actor: ((Array<File>) -> Unit)?
             uncaughtStackTraceText(context, uncaughtExceptionFilename, it)
         }
 
-        File(context.externalCacheDir, path).listFiles()?.let {
-            actor?.invoke(it)
-            it.forEach { file ->
-                file.deleteRecursively()
-            }
+        File(context.externalCacheDir, path).listFiles()?.let { actor?.invoke(it) }
+    }
+
+
+    fun clear(context: Context) {
+        File(context.externalCacheDir, path).listFiles()?.forEach { file ->
+            Log.e(file)
+            file.deleteRecursively()
         }
     }
 
