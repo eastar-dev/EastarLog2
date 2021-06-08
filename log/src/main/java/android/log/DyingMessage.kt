@@ -17,7 +17,7 @@ import java.lang.ref.WeakReference
 import java.text.SimpleDateFormat
 import java.util.*
 
-class UncaughtExceptionHandler {
+class DyingMessage(private val path: String = "temp", private val timeFormatter: String = "yyyyMMdd-HHmmss") {
     operator fun invoke(context: Context, uncaughtExceptionPoster: (Array<out File>) -> Unit) {
         lastActivityWeakReference(context)
         uncaughtExceptionHandler {
@@ -26,7 +26,7 @@ class UncaughtExceptionHandler {
             uncaughtStackTraceText(context, uncaughtExceptionFilename, it)
         }
 
-        File(context.getExternalFilesDir(null), "cache/temp").listFiles()?.let {
+        File(context.getExternalFilesDir(null), path).listFiles()?.let {
             uncaughtExceptionPoster(it)
             it.forEach { file ->
                 file.deleteRecursively()
@@ -58,7 +58,7 @@ class UncaughtExceptionHandler {
         }
     }
 
-    private val now get() = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault()).format(Date(System.currentTimeMillis()))
+    private val now get() = SimpleDateFormat(timeFormatter, Locale.getDefault()).format(Date(System.currentTimeMillis()))
     private val uncaughtExceptionFilename: String get() = mLastActivityWeakReference?.get()?.let { uncaughtExceptionFilename(it) } ?: now
 
 
@@ -72,15 +72,15 @@ class UncaughtExceptionHandler {
     }
 
     private fun uncaughtStackTraceText(context: Context, filename: String, stackTraceText: String) {
-        File(context.getExternalFilesDir(null), "cache/temp/$filename.txt")
+        File(context.externalCacheDir, "$path/$filename.txt")
             .apply { parentFile?.mkdirs() }
             .writeText("${BuildConfig.BUILD_TIME}\n$filename\n$stackTraceText")
     }
 
-    private fun uncaughtScreen(context: Context, uncaughtExceptionFilename: String) {
+    private fun uncaughtScreen(context: Context, filename: String) {
         mLastActivityWeakReference?.get()?.findViewById<View>(Window.ID_ANDROID_CONTENT)?.drawToBitmap(Bitmap.Config.RGB_565)
             ?.let { bitmap ->
-                File(context.getExternalFilesDir(null), "cache/temp/${uncaughtExceptionFilename}.jpeg")
+                File(context.externalCacheDir, "$path/$filename.jpeg")
                     .apply { parentFile?.mkdirs() }
                     .outputStream().use {
                         bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it)
