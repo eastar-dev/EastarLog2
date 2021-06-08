@@ -1,4 +1,3 @@
-include ':libTest'
 include ':app'
 include ':log'
 include ':logNoOp'

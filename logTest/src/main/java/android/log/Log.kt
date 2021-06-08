@@ -18,7 +18,6 @@
 
 package android.log
 
-import com.sun.jndi.toolkit.url.Uri
 import org.json.JSONArray
 import org.json.JSONObject
 import java.lang.reflect.Method
@@ -294,22 +293,6 @@ object Log {
 
     private fun _DUMP(cls: Class<*>?): String {
         return cls?.simpleName ?: "null_Class<?>"
-    }
-
-    private fun _DUMP(uri: Uri?): String {
-        if (uri == null) return "null_Uri"
-        //		return uri.toString();
-        val sb = StringBuilder()
-        sb.append("\r\n Uri                       ").append(uri.toString())
-        sb.append("\r\n Scheme                    ")
-            .append(if (uri.scheme != null) uri.scheme else "null")
-        sb.append("\r\n Host                      ")
-            .append(if (uri.host != null) uri.host else "null")
-        sb.append("\r\n Path                      ")
-            .append(if (uri.path != null) uri.path else "null")
-        sb.append("\r\n Query                     ")
-            .append(if (uri.query != null) uri.query else "null")
-        return sb.toString()
     }
 
     private fun _DUMP(th: Throwable?): String {
