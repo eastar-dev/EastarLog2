@@ -11,17 +11,15 @@ import android.view.Window
 import android.webkit.WebView
 import androidx.core.view.children
 import androidx.core.view.drawToBitmap
-import dev.eastar.log.BuildConfig
 import java.io.File
 import java.lang.ref.WeakReference
 import java.text.SimpleDateFormat
 import java.util.*
 
 class UncaughtExceptionHandler(context: Context, actor: ((Array<out File>) -> Unit)? = null) {
-    companion object {
-        var path: String = "temp"
-        var timeFormatter: String = "yyyyMMdd-HHmmss"
-    }
+    var path: String = "temp"
+    var timeFormatter: String = "yyyyMMdd-HHmmss"
+    var versionTag: String = "v"
 
     init {
         lastActivityWeakReference(context)
@@ -79,7 +77,7 @@ class UncaughtExceptionHandler(context: Context, actor: ((Array<out File>) -> Un
     private fun uncaughtStackTraceText(context: Context, filename: String, stackTraceText: String) {
         File(context.externalCacheDir, "$path/$filename.txt")
             .apply { parentFile?.mkdirs() }
-            .writeText("${BuildConfig.BUILD_TIME}\n$filename\n$stackTraceText")
+            .writeText("$versionTag\n$filename\n$stackTraceText")
     }
 
     private fun uncaughtScreen(context: Context, filename: String) {
