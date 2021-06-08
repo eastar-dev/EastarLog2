@@ -17,8 +17,13 @@ import java.lang.ref.WeakReference
 import java.text.SimpleDateFormat
 import java.util.*
 
-class DyingMessage(private val path: String = "temp", private val timeFormatter: String = "yyyyMMdd-HHmmss") {
-    operator fun invoke(context: Context, uncaughtExceptionPoster: (Array<out File>) -> Unit) {
+class UncaughtExceptionHandler(context: Context, actor: ((Array<out File>) -> Unit)? = null) {
+    companion object {
+        var path: String = "temp"
+        var timeFormatter: String = "yyyyMMdd-HHmmss"
+    }
+
+    init {
         lastActivityWeakReference(context)
         uncaughtExceptionHandler {
             val uncaughtExceptionFilename = uncaughtExceptionFilename
@@ -27,7 +32,7 @@ class DyingMessage(private val path: String = "temp", private val timeFormatter:
         }
 
         File(context.getExternalFilesDir(null), path).listFiles()?.let {
-            uncaughtExceptionPoster(it)
+            actor?.invoke(it)
             it.forEach { file ->
                 file.deleteRecursively()
             }
