@@ -1,6 +1,6 @@
 package android.log
 
 
-val String?.singleLog: String get() = this?.take(3500)?.trim()?.replace("\r", "")?.replace('\n', '↵') ?: ""
+val String?.singleLog: String get() = this?.take(3000)?.trim()?.replace("\r", "")?.replace('\n', '↵') ?: ""
 val Boolean?.IW: Int get() = if (this == true) android.util.Log.INFO else android.util.Log.WARN
 val Boolean?.priority: Int get() = IW
