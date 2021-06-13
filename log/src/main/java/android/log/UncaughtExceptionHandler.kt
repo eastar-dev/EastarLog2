@@ -1,5 +1,7 @@
 @file:Suppress("unused")
 
+package android.log
+
 import android.app.Activity
 import android.app.Application
 import android.content.Context
