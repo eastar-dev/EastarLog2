@@ -100,9 +100,7 @@ object Log {
     private fun safeCut(byteArray: ByteArray, startOffset: Int): Int {
         val byteLength = byteArray.size
         if (byteLength <= startOffset) throw ArrayIndexOutOfBoundsException("!!text_length <= start_byte_index")
-        if (byteArray[startOffset] and 0xc0.toByte() == 0x80.toByte()) throw java.lang.UnsupportedOperationException(
-            "!!start_byte_index must splited index"
-        )
+        if (byteArray[startOffset] and 0xc0.toByte() == 0x80.toByte()) throw UnsupportedOperationException("!!start_byte_index must splited index")
 
         var position = startOffset + MAX_LOG_LINE_BYTE_SIZE
         if (byteLength <= position) return byteLength - startOffset
