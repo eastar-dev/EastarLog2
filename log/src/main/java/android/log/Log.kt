@@ -219,9 +219,15 @@ object Log {
     }
 
     @JvmStatic
-    fun printStackTrace(e: Throwable) {
+    fun printStackTrace(th: Throwable) {
         if (!LOG) return
-        e.printStackTrace()
+        th.printStackTrace()
+    }
+
+    @JvmStatic
+    fun getStackTraceString(th: Throwable) {
+        if (!LOG) return
+        android.util.Log.getStackTraceString(th)
     }
 
     @JvmStatic
