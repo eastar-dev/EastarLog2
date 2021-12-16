@@ -1,9 +1,12 @@
 package dev.eastar.app
 
-import android.log.Log
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
+
 import org.junit.Test
 import org.junit.runner.RunWith
+
+import org.junit.Assert.*
 
 /**
  * Instrumented test, which will execute on an Android device.
@@ -13,12 +16,10 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ExampleInstrumentedTest {
     @Test
-    fun test() {
-        Log.e("테스트")
-    }
-
-    @Test
-    fun 테스트() {
-        Log.e("테스트")
+    fun useAppContext() {
+        // Context of the app under test.
+        val appContext = InstrumentationRegistry.getInstrumentation().targetContext
+//        Log.e()
+        assertEquals("dev.eastar.recyclerview", appContext.packageName)
     }
 }
