@@ -3,7 +3,6 @@ plugins {
     id 'kotlin'
 }
 
-apply plugin: 'com.github.dcendents.android-maven'
 group = 'com.github.eastar-dev'
 
 java {
@@ -12,6 +11,5 @@ java {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     implementation "org.json:json:20210307"
 }
