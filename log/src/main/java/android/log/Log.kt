@@ -114,18 +114,18 @@ object Log {
     }
 
     @JvmStatic
-    fun p(priority: Int, vararg args: Any?) {
-        if (!LOG) return
+    fun p(priority: Int, vararg args: Any?): Int {
+        if (!LOG) return 0
         val info = getStack()
         val tag = getTag(info)
         val locator = getLocator(info)
         val msg = _MESSAGE(*args)
-        println(priority, tag, locator, msg)
+        return println(priority, tag, locator, msg)
     }
 
     @JvmStatic
-    fun ps(priority: Int, info: StackTraceElement, vararg args: Any?) {
-        if (!LOG) return
+    fun ps(priority: Int, info: StackTraceElement, vararg args: Any?): Int {
+        if (!LOG) return 0
         val tag = getTag(info)
         val locator = getLocator(info)
         val msg = _MESSAGE(*args)
@@ -136,8 +136,8 @@ object Log {
 
 
     @JvmStatic
-    fun println(priority: Int, tag: String, locator: String, msg: String?) {
-        if (!LOG) return
+    fun println(priority: Int, tag: String, locator: String, msg: String?): Int {
+        if (!LOG) return 0
 
         flog(msg)
 
@@ -159,57 +159,61 @@ object Log {
         sb.replace(0, lastTag.length, lastTag)
         sb.replace(sb.length - locator.length, sb.length, locator)
         val adjTag = sb.toString()
+
+        var sum = 0
         when (sa.size) {
-            0 -> android.util.Log.println(priority, adjTag, PREFIX)
-            1 -> android.util.Log.println(priority, adjTag, sa[0])
+            0 -> sum += android.util.Log.println(priority, adjTag, PREFIX)
+            1 -> sum += android.util.Log.println(priority, adjTag, sa[0])
             else -> android.util.Log.println(priority, adjTag, PREFIX_MULTILINE).run {
+                sum += this
                 sa.forEach {
-                    android.util.Log.println(priority, adjTag, it)
+                    sum += android.util.Log.println(priority, adjTag, it)
                 }
             }
         }
+        return sum
     }
 
     @JvmStatic
-    fun a(vararg args: Any?) {
-        if (!LOG) return
-        p(ASSERT, *args)
+    fun a(vararg args: Any?): Int {
+        if (!LOG) return 0
+        return p(ASSERT, *args)
     }
 
     @JvmStatic
-    fun e(vararg args: Any?) {
-        if (!LOG) return
-        p(ERROR, *args)
+    fun e(vararg args: Any?): Int {
+        if (!LOG) return 0
+        return p(ERROR, *args)
     }
 
     @JvmStatic
-    fun w(vararg args: Any?) {
-        if (!LOG) return
-        p(WARN, *args)
+    fun w(vararg args: Any?): Int {
+        if (!LOG) return 0
+        return p(WARN, *args)
     }
 
     @JvmStatic
-    fun i(vararg args: Any?) {
-        if (!LOG) return
-        p(INFO, *args)
+    fun i(vararg args: Any?): Int {
+        if (!LOG) return 0
+        return p(INFO, *args)
     }
 
     @JvmStatic
-    fun d(vararg args: Any?) {
-        if (!LOG) return
-        p(DEBUG, *args)
+    fun d(vararg args: Any?): Int {
+        if (!LOG) return 0
+        return p(DEBUG, *args)
     }
 
     @JvmStatic
-    fun v(vararg args: Any?) {
-        if (!LOG) return
-        p(VERBOSE, *args)
+    fun v(vararg args: Any?): Int {
+        if (!LOG) return 0
+        return p(VERBOSE, *args)
     }
 
     @JvmStatic
-    fun println(priority: Int, tag: String?, msg: String) {
-        if (!LOG) return
-        p(priority, tag, msg)
+    fun println(priority: Int, tag: String?, msg: String): Int {
+        if (!LOG) return 0
+        return p(priority, tag, msg)
     }
 
     @JvmStatic
