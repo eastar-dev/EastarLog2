@@ -225,9 +225,9 @@ object Log {
     }
 
     @JvmStatic
-    fun getStackTraceString(th: Throwable) {
-        if (!LOG) return
-        android.util.Log.getStackTraceString(th)
+    fun getStackTraceString(th: Throwable): String {
+        if (!LOG) return ""
+        return android.util.Log.getStackTraceString(th)
     }
 
     @JvmStatic
@@ -358,7 +358,9 @@ object Log {
     }.getOrDefault(text)
 
     private fun _DUMP(method: Method): String = method.run {
-        "$modifiers ${returnType.simpleName.padEnd(20).take(20)}${declaringClass.simpleName}.$name(${parameterTypes.joinToString { it.simpleName }})"
+        "$modifiers ${
+            returnType.simpleName.padEnd(20).take(20)
+        }${declaringClass.simpleName}.$name(${parameterTypes.joinToString { it.simpleName }})"
     }
 
     private fun _DUMP(v: View, depth: Int = 0): String {
@@ -368,7 +370,10 @@ object Log {
         when (v) {
             is WebView -> out.insert(depth, "W:" + Integer.toHexString(System.identityHashCode(v)) + ":" + v.title)
             is TextView -> out.insert(depth, "T:" + Integer.toHexString(System.identityHashCode(v)) + ":" + v.text)
-            else -> out.insert(depth, "N:" + Integer.toHexString(System.identityHashCode(v)) + ":" + v.javaClass.simpleName)
+            else -> out.insert(
+                depth,
+                "N:" + Integer.toHexString(System.identityHashCode(v)) + ":" + v.javaClass.simpleName
+            )
         }
         out.setLength(space.length)
         val id = v.id
@@ -413,7 +418,8 @@ object Log {
         sb.append("\r\n Scheme                    ").append(if (uri.scheme != null) uri.scheme else "null")
         sb.append("\r\n Host                      ").append(if (uri.host != null) uri.host else "null")
         sb.append("\r\n Path                      ").append(if (uri.path != null) uri.path else "null")
-        sb.append("\r\n LastPathSegment           ").append(if (uri.lastPathSegment != null) uri.lastPathSegment else "null")
+        sb.append("\r\n LastPathSegment           ")
+            .append(if (uri.lastPathSegment != null) uri.lastPathSegment else "null")
         sb.append("\r\n Query                     ").append(if (uri.query != null) uri.query else "null")
         sb.append("\r\n Fragment                  ").append(if (uri.fragment != null) uri.fragment else "null")
         return sb.toString()
@@ -486,12 +492,14 @@ object Log {
                 }
                 duplication.add(value)
                 if (value is Collection<*>) {
-                    sb.append(name).append('<').append(value.javaClass.simpleName).append('>').append(" = ").append(":\n")
+                    sb.append(name).append('<').append(value.javaClass.simpleName).append('>').append(" = ")
+                        .append(":\n")
                     val it = value.iterator()
                     while (it.hasNext()) sb.append(_DUMP_object("  $name[item]", it.next(), duplication))
                 } else {
                     val clz: Class<*> = value.javaClass
-                    sb.append(name).append('<').append(value.javaClass.simpleName).append('>').append(" = ").append(":\n")
+                    sb.append(name).append('<').append(value.javaClass.simpleName).append('>').append(" = ")
+                        .append(":\n")
                     for (f in clz.declaredFields) {
                         f.isAccessible = true
                         sb.append(_DUMP_object("  " + name + "." + f.name, f[value], duplication))
@@ -700,8 +708,11 @@ object Log {
                                 val textBetweenElements = s.substring(i + 1, nextStartElementPos)
                                 // If the space between elements is solely newlines, let them through to preserve additional newlines in source document.
                                 when {
-                                    textBetweenElements.replace("\n".toRegex(), "").isEmpty() -> sb.append(textBetweenElements + "\n")
-                                    textBetweenElements.length <= lineLength * 0.5 -> sb.append(textBetweenElements).also { singleLine = true }
+                                    textBetweenElements.replace("\n".toRegex(), "").isEmpty() -> sb.append(
+                                        textBetweenElements + "\n"
+                                    )
+                                    textBetweenElements.length <= lineLength * 0.5 -> sb.append(textBetweenElements)
+                                        .also { singleLine = true }
                                     else -> sb.append("\n" + lineWrap(textBetweenElements, lineLength, indent) + "\n")
                                 }
                                 i = nextStartElementPos - 1
