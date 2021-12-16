@@ -1,4 +1,4 @@
-include ':app'
+//include ':app'
 include ':log'
 include ':logNoOp'
 include ':logTest'
