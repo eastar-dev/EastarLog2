@@ -34,9 +34,8 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
 
-//    debugImplementation "com.github.eastar-dev.EastarLog2:log:451dc90679"
-//    releaseImplementation "com.github.eastar-dev.EastarLog2:logNoOp:451dc90679"
-
+//    debugImplementation "com.github.eastar-dev.EastarLog2:log:90a688319a"
+//    releaseImplementation "com.github.eastar-dev.EastarLog2:logNoOp:90a688319a"
     debugImplementation project(':log')
     releaseImplementation project(':logNoOp')
 }

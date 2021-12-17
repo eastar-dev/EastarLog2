@@ -7,11 +7,11 @@ plugins {
 group = 'com.github.eastar-dev'
 
 android {
-    compileSdkVersion 32
+    compileSdkVersion 31
 
     defaultConfig {
         minSdkVersion 19
-        targetSdkVersion 32
+        targetSdkVersion 31
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -25,10 +25,10 @@ dependencies {
 //https://developer.android.com/studio/build/maven-publish-plugin
 //run gradle publishToMavenLocal
 //and check
-// cd ~/.m2/repository/com/example/MyLibrary/EastarRecyclerview2
-//EastarRecyclerview2-1.0.pom
-//EastarRecyclerview2-1.0.aar
-//EastarRecyclerview2-1.0.module
+// cd ~/.m2/repository/com/example/MyLibrary/logNoOp
+//logNoOp-1.0.pom
+//logNoOp-1.0.aar
+//logNoOp-1.0.module
 
 // Because the components are created only during the afterEvaluate phase, you must
 // configure your publications using the afterEvaluate() lifecycle method.
@@ -45,15 +45,6 @@ afterEvaluate {
                 artifactId = 'logNoOp'
                 version = '1.0'
             }
-            // Creates a Maven publication called “debug”.
-//            debug(MavenPublication) {
-//                // Applies the component for the debug build variant.
-//                from components.debug
-//
-//                groupId = 'com.example.MyLibrary'
-//                artifactId = 'final-debug'
-//                version = '1.0'
-//            }
         }
     }
 }
