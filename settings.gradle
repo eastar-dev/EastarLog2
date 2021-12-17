@@ -1,4 +1,3 @@
 include ':app'
-//include ':log'
-//include ':logNoOp'
-//include ':logTest'
+include ':log'
+include ':logNoOp'

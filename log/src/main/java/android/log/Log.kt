@@ -21,8 +21,12 @@ package android.log
 import android.content.Context
 import android.content.Intent
 import android.database.Cursor
-import android.graphics.*
+import android.graphics.Bitmap
 import android.graphics.Bitmap.CompressFormat
+import android.graphics.BitmapFactory
+import android.graphics.Point
+import android.graphics.Rect
+import android.graphics.RectF
 import android.net.Uri
 import android.os.Bundle
 import android.os.SystemClock
@@ -40,10 +44,11 @@ import java.io.FileOutputStream
 import java.lang.reflect.Method
 import java.nio.charset.Charset
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Arrays
+import java.util.Date
+import java.util.Locale
+import java.util.StringTokenizer
 import java.util.concurrent.TimeUnit
-import kotlin.collections.ArrayList
-import kotlin.collections.HashSet
 import kotlin.experimental.and
 
 /** @author eastar*/
@@ -172,6 +177,43 @@ object Log {
             }
         }
         return sum
+    }
+
+    @JvmStatic
+    fun println(vararg args: Any?) {
+        if (!LOG) return
+
+        val info = getStack()
+        val tag = getTag(info)
+        val locator = getLocator(info)
+        val msg = _MESSAGE(*args)
+
+        val sa = ArrayList<String>(100)
+        val st = StringTokenizer(msg, LF, false)
+        while (st.hasMoreTokens()) {
+            val byteText = st.nextToken().toByteArray()
+            var offset = 0
+            while (offset < byteText.size) {
+                val count = safeCut(byteText, offset)
+                sa.add(PREFIX + String(byteText, offset, count))
+                offset += count
+            }
+        }
+        val dots = "...................................................................................."
+        val sb = StringBuilder(dots)
+        val lastTag = tag.substring((tag.length + locator.length - dots.length).coerceAtLeast(0))
+        sb.replace(0, lastTag.length, lastTag)
+        sb.replace(sb.length - locator.length, sb.length, locator)
+        val adjTag = sb.toString()
+        when (sa.size) {
+            0 -> kotlin.io.println(adjTag + PREFIX)
+            1 -> kotlin.io.println(adjTag + sa[0])
+            else -> kotlin.io.println(adjTag + PREFIX_MULTILINE).run {
+                sa.forEach {
+                    kotlin.io.println(adjTag + it)
+                }
+            }
+        }
     }
 
     @JvmStatic

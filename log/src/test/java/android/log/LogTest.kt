@@ -1,11 +1,9 @@
 package android.log
 
-import org.junit.Assert.*
-
 import org.junit.Test
 import java.nio.charset.Charset
 
-class KtxKtTest {
+class LogTest {
 
     @Test
     fun getSingleLog() {

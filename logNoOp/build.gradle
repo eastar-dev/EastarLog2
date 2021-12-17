@@ -7,11 +7,11 @@ plugins {
 group = 'com.github.eastar-dev'
 
 android {
-    compileSdkVersion 31
+    compileSdkVersion 32
 
     defaultConfig {
         minSdkVersion 19
-        targetSdkVersion 31
+        targetSdkVersion 32
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8

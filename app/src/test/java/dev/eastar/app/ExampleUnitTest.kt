@@ -1,5 +1,7 @@
 package dev.eastar.app
 
+//import android.log.Log
+import android.log.Log
 import org.junit.Test
 
 import org.junit.Assert.*
@@ -12,7 +14,7 @@ import org.junit.Assert.*
 class ExampleUnitTest {
     @Test
     fun addition_isCorrect() {
-//        Log.e()
+        Log.println(123)
         assertEquals(4, 2 + 2)
     }
 }

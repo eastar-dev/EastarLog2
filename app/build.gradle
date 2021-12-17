@@ -19,9 +19,6 @@ android {
     }
     kotlinOptions { jvmTarget = '1.8' }
 }
-repositories {
-
-}
 android {
     configurations.all {
         resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
@@ -37,7 +34,36 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
 
-    implementation "com.github.eastar-dev.EastarLog2:log:451dc90679"
+//    debugImplementation "com.github.eastar-dev.EastarLog2:log:451dc90679"
 //    releaseImplementation "com.github.eastar-dev.EastarLog2:logNoOp:451dc90679"
-//    testImplementation "com.github.eastar-dev.EastarLog2:logTest:451dc90679"
+////    implementation "com.github.eastar-dev.EastarLog2:logTest:451dc90679"
+
+    debugImplementation project(':log')
+    releaseImplementation project(':logNoOp')
+//    testImplementation project(':logTest')
+}
+//keystore sign
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('release/key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+android {
+    signingConfigs {
+        sign {
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile file(keystoreProperties['storeFile'])
+            storePassword keystoreProperties['storePassword']
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.sign
+        }
+        release {
+            signingConfig signingConfigs.sign
+        }
+    }
 }
