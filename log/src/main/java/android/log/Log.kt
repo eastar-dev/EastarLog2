@@ -21,12 +21,8 @@ package android.log
 import android.content.Context
 import android.content.Intent
 import android.database.Cursor
-import android.graphics.Bitmap
+import android.graphics.*
 import android.graphics.Bitmap.CompressFormat
-import android.graphics.BitmapFactory
-import android.graphics.Point
-import android.graphics.Rect
-import android.graphics.RectF
 import android.net.Uri
 import android.os.Bundle
 import android.os.SystemClock
@@ -44,12 +40,11 @@ import java.io.FileOutputStream
 import java.lang.reflect.Method
 import java.nio.charset.Charset
 import java.text.SimpleDateFormat
-import java.util.Arrays
-import java.util.Date
-import java.util.Locale
-import java.util.StringTokenizer
+import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.collections.HashSet
 import kotlin.experimental.and
+import kotlin.experimental.inv
 
 /** @author eastar*/
 object Log {
@@ -102,20 +97,38 @@ object Log {
         }
     }
 
-    private fun safeCut(byteArray: ByteArray, startOffset: Int): Int {
-        val byteLength = byteArray.size
-        if (byteLength <= startOffset) throw ArrayIndexOutOfBoundsException("!!text_length <= start_byte_index")
-        if (byteArray[startOffset] and 0xc0.toByte() == 0x80.toByte()) throw UnsupportedOperationException("!!start_byte_index must splited index")
+    //return value count
+    private fun String.splitSafe(lengthByte: Int): List<String> {
+        require(lengthByte >= 3) { "min split length getter then 3" }
+        val textByteArray = toByteArray()
+        if (textByteArray.size <= lengthByte)
+            return listOf(this)
 
-        var position = startOffset + MAX_LOG_LINE_BYTE_SIZE
-        if (byteLength <= position) return byteLength - startOffset
+        val tokens = mutableListOf<String>()
+        //0xc0 : 1100 0000
+        //0x80 : 1000 0000
+        var startOffset = 0
+        while (startOffset + lengthByte < textByteArray.size) {
+            val position = startOffset + lengthByte - 1
+            val token = if (textByteArray[position] and 0x80.toByte() == 0x00.toByte()) {
+                String(textByteArray, startOffset, lengthByte)
+            } else {
+                var backByte = 0
+                while (textByteArray[position - backByte] and 0xc0.toByte() == 0x80.toByte()) backByte++
+                val charBytePositionLength = backByte + 1
+                val charByteLength = textByteArray[position - backByte].inv().countLeadingZeroBits()
 
-        while (startOffset <= position) {
-            if (byteArray[position] and 0xc0.toByte() != 0x80.toByte()) break
-            position--
+                if (charBytePositionLength == charByteLength) {
+                    String(textByteArray, startOffset, lengthByte)
+                } else {
+                    String(textByteArray, startOffset, lengthByte - charBytePositionLength)
+                }
+            }
+            tokens += token
+            startOffset += token.toByteArray().size
         }
-        if (position <= startOffset) throw UnsupportedOperationException("!!byte_length too small")
-        return position - startOffset
+        tokens += String(textByteArray, startOffset, textByteArray.size - startOffset)
+        return tokens
     }
 
     @JvmStatic
@@ -145,36 +158,15 @@ object Log {
         if (!LOG) return 0
 
         flog(msg)
+        msg ?: return android.util.Log.println(priority, tag, PREFIX)
 
-        val sa = ArrayList<String>(100)
-        val st = StringTokenizer(msg, LF, false)
-        while (st.hasMoreTokens()) {
-            val byteText = st.nextToken().toByteArray()
-            var offset = 0
-            while (offset < byteText.size) {
-                val count = safeCut(byteText, offset)
-                sa.add(PREFIX + String(byteText, offset, count))
-                offset += count
-            }
-        }
-        val dots = "...................................................................................."
-        val sb = StringBuilder(dots)
+        val sa = msg.split(LF).flatMap { it.splitSafe(MAX_LOG_LINE_BYTE_SIZE) }
+        if (sa.size == 1)
+            return android.util.Log.println(priority, tag, sa[0])
 
-        val lastTag = tag.substring((tag.length + locator.length - dots.length).coerceAtLeast(0))
-        sb.replace(0, lastTag.length, lastTag)
-        sb.replace(sb.length - locator.length, sb.length, locator)
-        val adjTag = sb.toString()
-
-        var sum = 0
-        when (sa.size) {
-            0 -> sum += android.util.Log.println(priority, adjTag, PREFIX)
-            1 -> sum += android.util.Log.println(priority, adjTag, sa[0])
-            else -> android.util.Log.println(priority, adjTag, PREFIX_MULTILINE).run {
-                sum += this
-                sa.forEach {
-                    sum += android.util.Log.println(priority, adjTag, it)
-                }
-            }
+        var sum = android.util.Log.println(priority, tag, PREFIX_MULTILINE)
+        sa.forEach {
+            sum += android.util.Log.println(priority, tag, it)
         }
         return sum
     }
@@ -188,31 +180,18 @@ object Log {
         val locator = getLocator(info)
         val msg = _MESSAGE(*args)
 
-        val sa = ArrayList<String>(100)
-        val st = StringTokenizer(msg, LF, false)
-        while (st.hasMoreTokens()) {
-            val byteText = st.nextToken().toByteArray()
-            var offset = 0
-            while (offset < byteText.size) {
-                val count = safeCut(byteText, offset)
-                sa.add(PREFIX + String(byteText, offset, count))
-                offset += count
-            }
+        val sa = msg.split(LF).flatMap { it.splitSafe(MAX_LOG_LINE_BYTE_SIZE) }
+        if (sa.isEmpty()) {
+            kotlin.io.println(tag + PREFIX)
+            return
         }
-        val dots = "...................................................................................."
-        val sb = StringBuilder(dots)
-        val lastTag = tag.substring((tag.length + locator.length - dots.length).coerceAtLeast(0))
-        sb.replace(0, lastTag.length, lastTag)
-        sb.replace(sb.length - locator.length, sb.length, locator)
-        val adjTag = sb.toString()
-        when (sa.size) {
-            0 -> kotlin.io.println(adjTag + PREFIX)
-            1 -> kotlin.io.println(adjTag + sa[0])
-            else -> kotlin.io.println(adjTag + PREFIX_MULTILINE).run {
-                sa.forEach {
-                    kotlin.io.println(adjTag + it)
-                }
-            }
+        if (sa.size == 1) {
+            kotlin.io.println(tag + sa[0])
+            return
+        }
+        kotlin.io.println(tag + PREFIX_MULTILINE)
+        sa.forEach {
+            kotlin.io.println(tag + it)
         }
     }
 
