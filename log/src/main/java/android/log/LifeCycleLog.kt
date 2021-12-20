@@ -16,12 +16,12 @@ fun Application.logActivity() = registerActivityLifecycleCallbacks(object : Appl
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
         logFragment(activity)
         val ext = if (activity.javaClass.getAnnotation(Metadata::class.java) == null) "java" else "kt"
-        activity.javaClass.simpleName.let { Log.p(Log.ERROR, "onActivityCreated.($it.$ext:0)".toTag, it) }
+        activity.javaClass.simpleName.let { Log.pt(Log.ERROR, "onActivityCreated.($it.$ext:0)".toTag, it) }
     }
 
     override fun onActivityDestroyed(activity: Activity) {
         val ext = if (activity.javaClass.getAnnotation(Metadata::class.java) == null) "java" else "kt"
-        activity.javaClass.simpleName.let { Log.p(Log.WARN, "onActivityDestroyed.($it.$ext:0)".toTag, it) }
+        activity.javaClass.simpleName.let { Log.pt(Log.WARN, "onActivityDestroyed.($it.$ext:0)".toTag, it) }
     }
 
     override fun onActivityStarted(activity: Activity) {}
@@ -33,19 +33,26 @@ fun Application.logActivity() = registerActivityLifecycleCallbacks(object : Appl
 
 private fun logFragment(activity: Activity) {
     (activity as? AppCompatActivity)?.run {
-        supportFragmentManager.registerFragmentLifecycleCallbacks(object :
-            FragmentManager.FragmentLifecycleCallbacks() {
-            override fun onFragmentCreated(fm: FragmentManager, f: Fragment, savedInstanceState: Bundle?) {
-                val ext = if (f.javaClass.getAnnotation(Metadata::class.java) == null) "java" else "kt"
-                f.javaClass.simpleName.takeUnless { "SupportRequestManagerFragment" == it }
-                    ?.let { Log.p(Log.ERROR, "onFragmentCreated.($it.$ext:0)".toTag, it) }
-            }
+        supportFragmentManager.registerFragmentLifecycleCallbacks(
+            object : FragmentManager.FragmentLifecycleCallbacks() {
+                override fun onFragmentCreated(fm: FragmentManager, f: Fragment, savedInstanceState: Bundle?) {
+                    val ext = if (f.javaClass.getAnnotation(Metadata::class.java) == null) "java" else "kt"
+                    f.javaClass.simpleName.takeUnless {
+                        "SupportRequestManagerFragment" == it
+                    }?.let {
+                        Log.pt(Log.ERROR, "onFragmentCreated.($it.$ext:0)".toTag, it)
+                    }
+                }
 
-            override fun onFragmentDestroyed(fm: FragmentManager, f: Fragment) {
-                val ext = if (f.javaClass.getAnnotation(Metadata::class.java) == null) "java" else "kt"
-                f.javaClass.simpleName.takeUnless { "SupportRequestManagerFragment" == it }
-                    ?.let { Log.p(Log.WARN, "onFragmentDestroyed.($it.$ext:0)".toTag, it) }
-            }
-        }, true)
+                override fun onFragmentDestroyed(fm: FragmentManager, f: Fragment) {
+                    val ext = if (f.javaClass.getAnnotation(Metadata::class.java) == null) "java" else "kt"
+                    f.javaClass.simpleName.takeUnless {
+                        "SupportRequestManagerFragment" == it
+                    }?.let {
+                        Log.pt(Log.WARN, "onFragmentDestroyed.($it.$ext:0)".toTag, it)
+                    }
+                }
+            }, true
+        )
     }
 }

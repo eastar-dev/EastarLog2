@@ -1,5 +1,6 @@
 package android.log
 
+import android.log.Log.splitSafe
 import org.junit.Test
 
 

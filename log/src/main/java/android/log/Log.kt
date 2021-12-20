@@ -127,11 +127,58 @@ object Log {
         }
     }
 
+    @JvmStatic
+    fun p(priority: Int, vararg args: Any?): Int {
+        if (!LOG) return 0
+        val info = getStack()
+        val tag = getTag(info)
+        val msg = getMessage(*args)
+        return printlnInternal(priority, tag, msg)
+    }
 
     @JvmStatic
-    fun println(priority: Int, tag: String?, msg: String?): Int {
+    fun pt(priority: Int, tag: String, vararg args: Any?): Int {
         if (!LOG) return 0
+        val msg = getMessage(*args)
+        return printlnInternal(priority, tag, msg)
+    }
 
+    @JvmStatic
+    fun ps(priority: Int, info: StackTraceElement, vararg args: Any?): Int {
+        if (!LOG) return 0
+        val tag = getTag(info)
+        val msg = getMessage(*args)
+        return printlnInternal(priority, tag, msg)
+    }
+
+    @JvmStatic
+    fun pn(priority: Int, depth: Int, vararg args: Any?): Int {
+        if (!LOG) return 0
+        val info = Exception().stackTrace[1 + depth]
+        val tag = getTag(info)
+        val msg = getMessage(*args)
+        return printlnInternal(priority, tag, msg)
+    }
+
+    @JvmStatic
+    fun pc(priority: Int, method: String, vararg args: Any?): Int {
+        if (!LOG) return 0
+        val info = getStackCaller(method)
+        val tag = getTag(info)
+        val msg = getMessage(*args)
+        return printlnInternal(priority, tag, msg)
+    }
+
+    @JvmStatic
+    fun pm(priority: Int, method: String, vararg args: Any?): Int {
+        if (!LOG) return 0
+        val info = getStackMethod(method)
+        val tag = getTag(info)
+        val msg = getMessage(*args)
+        return printlnInternal(priority, tag, msg)
+    }
+
+    private fun printlnInternal(priority: Int, tag: String?, msg: String?): Int {
         flog(msg)
 
         msg ?: return android.util.Log.println(priority, tag, PREFIX)
@@ -150,112 +197,6 @@ object Log {
             }
     }
 
-    @JvmStatic
-    fun p(priority: Int, vararg args: Any?): Int {
-        if (!LOG) return 0
-        val info = getStack()
-        val tag = getTag(info)
-        val msg = getMessage(*args)
-        return println(priority, tag, msg)
-    }
-
-    @JvmStatic
-    fun p(priority: Int, tag: String, vararg args: Any?): Int {
-        if (!LOG) return 0
-        val info = getStack()
-        val msg = getMessage(*args)
-        return println(priority, tag, msg)
-    }
-
-    @JvmStatic
-    fun ps(priority: Int, info: StackTraceElement, vararg args: Any?): Int {
-        if (!LOG) return 0
-        val tag = getTag(info)
-        val msg = getMessage(*args)
-        return println(priority, tag, msg)
-    }
-
-    @JvmStatic
-    fun pn(priority: Int, depth: Int, vararg args: Any?) {
-        if (!LOG) return
-        val info = Exception().stackTrace[1 + depth]
-        val tag = getTag(info)
-        val msg = getMessage(*args)
-        println(priority, tag, msg)
-    }
-
-    @JvmStatic
-    fun pc(priority: Int, method: String, vararg args: Any?) {
-        if (!LOG) return
-        val info = getStackCaller(method)
-        val tag = getTag(info)
-        val msg = getMessage(*args)
-        println(priority, tag, msg)
-    }
-
-    @JvmStatic
-    fun pm(priority: Int, method: String, vararg args: Any?) {
-        if (!LOG) return
-        val info = getStackMethod(method)
-        val tag = getTag(info)
-        val msg = getMessage(*args)
-        println(priority, tag, msg)
-    }
-
-    @JvmStatic
-    fun a(vararg args: Any?): Int {
-        if (!LOG) return 0
-        return p(ASSERT, *args)
-    }
-
-    @JvmStatic
-    fun e(vararg args: Any?): Int {
-        if (!LOG) return 0
-        return p(ERROR, *args)
-    }
-
-    @JvmStatic
-    fun w(vararg args: Any?): Int {
-        if (!LOG) return 0
-        return p(WARN, *args)
-    }
-
-    @JvmStatic
-    fun i(vararg args: Any?): Int {
-        if (!LOG) return 0
-        return p(INFO, *args)
-    }
-
-    @JvmStatic
-    fun d(vararg args: Any?): Int {
-        if (!LOG) return 0
-        return p(DEBUG, *args)
-    }
-
-    @JvmStatic
-    fun v(vararg args: Any?): Int {
-        if (!LOG) return 0
-
-        return p(VERBOSE, *args)
-    }
-
-    @JvmStatic
-    fun printStackTrace() {
-        if (!LOG) return
-        TraceLog().printStackTrace()
-    }
-
-    @JvmStatic
-    fun printStackTrace(th: Throwable) {
-        if (!LOG) return
-        th.printStackTrace()
-    }
-
-    @JvmStatic
-    fun getStackTraceString(th: Throwable): String {
-        if (!LOG) return ""
-        return android.util.Log.getStackTraceString(th)
-    }
 
     @JvmStatic
     fun toast(context: Context, vararg args: Any?) {
@@ -278,8 +219,10 @@ object Log {
     @JvmStatic
     fun viewTree(parent: View, depth: Int = 0) {
         if (!LOG) return
-        if (parent !is ViewGroup)
-            return pn(ERROR, depth + 2, _DUMP(parent, 0))
+        if (parent !is ViewGroup) {
+            pn(ERROR, depth + 2, _DUMP(parent, 0))
+            return
+        }
 
         for (i in 0 until parent.childCount) {
             val child = parent.getChildAt(i)
@@ -806,6 +749,69 @@ object Log {
             return this
 
         return textByteArray.takeSafe(lengthByte, startOffset)
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
+    //over lap func
+    @JvmStatic
+    fun println(priority: Int, tag: String?, msg: String?): Int {
+        if (!LOG) return 0
+        return p(priority, tag, msg)
+    }
+
+    @JvmStatic
+    fun a(vararg args: Any?): Int {
+        if (!LOG) return 0
+        return p(ASSERT, *args)
+    }
+
+    @JvmStatic
+    fun e(vararg args: Any?): Int {
+        if (!LOG) return 0
+        return p(ERROR, *args)
+    }
+
+    @JvmStatic
+    fun w(vararg args: Any?): Int {
+        if (!LOG) return 0
+        return p(WARN, *args)
+    }
+
+    @JvmStatic
+    fun i(vararg args: Any?): Int {
+        if (!LOG) return 0
+        return p(INFO, *args)
+    }
+
+    @JvmStatic
+    fun d(vararg args: Any?): Int {
+        if (!LOG) return 0
+        return p(DEBUG, *args)
+    }
+
+    @JvmStatic
+    fun v(vararg args: Any?): Int {
+        if (!LOG) return 0
+
+        return p(VERBOSE, *args)
+    }
+
+    @JvmStatic
+    fun printStackTrace() {
+        if (!LOG) return
+        TraceLog().printStackTrace()
+    }
+
+    @JvmStatic
+    fun printStackTrace(th: Throwable) {
+        if (!LOG) return
+        th.printStackTrace()
+    }
+
+    @JvmStatic
+    fun getStackTraceString(th: Throwable): String {
+        if (!LOG) return ""
+        return android.util.Log.getStackTraceString(th)
     }
 
 }
