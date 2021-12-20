@@ -72,6 +72,8 @@ object Log {
 
     private var LOG_PASS_REGEX = "^android\\..+|^com\\.android\\..+|^java\\..+".toRegex()
 
+    private val String.width get() = toByteArray(Charset.forName("euc-kr")).size
+
     fun getTag(stack: StackTraceElement = getStack()): String {
         val className = getClzMethod(stack)
         val locator = getLocator(stack)
@@ -742,7 +744,7 @@ object Log {
 
 
     //etc
-    private val String.width get() = toByteArray(Charset.forName("euc-kr")).size
+
 
     private fun String.splitSafe(lengthByte: Int): List<String> {
         require(lengthByte >= 3) { "min split length getter then 3" }
