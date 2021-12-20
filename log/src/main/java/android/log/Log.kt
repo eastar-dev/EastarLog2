@@ -21,8 +21,12 @@ package android.log
 import android.content.Context
 import android.content.Intent
 import android.database.Cursor
-import android.graphics.*
+import android.graphics.Bitmap
 import android.graphics.Bitmap.CompressFormat
+import android.graphics.BitmapFactory
+import android.graphics.Point
+import android.graphics.Rect
+import android.graphics.RectF
 import android.net.Uri
 import android.os.Bundle
 import android.os.SystemClock
@@ -33,18 +37,18 @@ import android.view.ViewGroup
 import android.webkit.WebView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.annotation.VisibleForTesting
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import java.lang.reflect.Method
-import java.nio.charset.Charset
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Arrays
+import java.util.Date
+import java.util.Locale
+import java.util.StringTokenizer
 import java.util.concurrent.TimeUnit
-import kotlin.collections.HashSet
-import kotlin.experimental.and
-import kotlin.experimental.inv
 
 /** @author eastar*/
 object Log {
@@ -60,15 +64,29 @@ object Log {
     private const val PREFIX = "``"
     private const val PREFIX_MULTILINE = "$PREFIX▼"
     private const val LF = "\n"
+    private const val TAG_LONGTH = 50
     private const val MAX_LOG_LINE_BYTE_SIZE = 3600
 
     private var LOG_PASS_REGEX = "^android\\..+|^com\\.android\\..+|^java\\..+".toRegex()
 
+    fun getTag(stack: StackTraceElement = getStack()): String {
+        val className = getClzMethod(stack)
+        val locator = getLocator(stack)
+        var tag = (className + locator).takeLast(TAG_LONGTH).padStart(TAG_LONGTH, '.')
+        while (tag.width != TAG_LONGTH) {
+            tag = if (tag.width > TAG_LONGTH)
+                tag.drop(tag.width - TAG_LONGTH)
+            else
+                tag.padStart(TAG_LONGTH, '.')
+        }
+        return tag
+    }
+
     private fun getLocator(info: StackTraceElement) = ".(%s:%d)".format(info.fileName, info.lineNumber)
 
-    private fun getTag(info: StackTraceElement): String = runCatching {
-        //info.className.takeLastWhile { it != '.' } + "." + info.methodName
-        info.className.takeLastWhile { it != '.' }.replace('$', '.')
+    private fun getClzMethod(info: StackTraceElement): String = runCatching {
+        info.className.takeLastWhile { it != '.' } + "::" + info.methodName
+//            info.className.takeLastWhile { it != '.' }.replace('$', '.')
     }.getOrDefault(info.className)
 
     private fun getStack(): StackTraceElement {
@@ -97,40 +115,6 @@ object Log {
         }
     }
 
-    //return value count
-    private fun String.splitSafe(lengthByte: Int): List<String> {
-        require(lengthByte >= 3) { "min split length getter then 3" }
-        val textByteArray = toByteArray()
-        if (textByteArray.size <= lengthByte)
-            return listOf(this)
-
-        val tokens = mutableListOf<String>()
-        //0xc0 : 1100 0000
-        //0x80 : 1000 0000
-        var startOffset = 0
-        while (startOffset + lengthByte < textByteArray.size) {
-            val position = startOffset + lengthByte - 1
-            val token = if (textByteArray[position] and 0x80.toByte() == 0x00.toByte()) {
-                String(textByteArray, startOffset, lengthByte)
-            } else {
-                var backByte = 0
-                while (textByteArray[position - backByte] and 0xc0.toByte() == 0x80.toByte()) backByte++
-                val charBytePositionLength = backByte + 1
-                val charByteLength = textByteArray[position - backByte].inv().countLeadingZeroBits()
-
-                if (charBytePositionLength == charByteLength) {
-                    String(textByteArray, startOffset, lengthByte)
-                } else {
-                    String(textByteArray, startOffset, lengthByte - charBytePositionLength)
-                }
-            }
-            tokens += token
-            startOffset += token.toByteArray().size
-        }
-        tokens += String(textByteArray, startOffset, textByteArray.size - startOffset)
-        return tokens
-    }
-
     @JvmStatic
     fun p(priority: Int, vararg args: Any?): Int {
         if (!LOG) return 0
@@ -138,7 +122,7 @@ object Log {
         val tag = getTag(info)
         val locator = getLocator(info)
         val msg = _MESSAGE(*args)
-        return println(priority, tag, locator, msg)
+        return internalPrintln(priority, tag, msg)
     }
 
     @JvmStatic
@@ -147,53 +131,43 @@ object Log {
         val tag = getTag(info)
         val locator = getLocator(info)
         val msg = _MESSAGE(*args)
-        return println(priority, tag, locator, msg)
+        return internalPrintln(priority, tag, msg)
     }
 
-    val String.lengthEuckr get() = toByteArray(Charset.forName("euc-kr")).size
 
-
-    @JvmStatic
-    fun println(priority: Int, tag: String, locator: String, msg: String?): Int {
+    private fun internalPrintln(priority: Int, tag: String, msg: String?): Int {
         if (!LOG) return 0
-
         flog(msg)
         msg ?: return android.util.Log.println(priority, tag, PREFIX)
-
-        val sa = msg.split(LF).flatMap { it.splitSafe(MAX_LOG_LINE_BYTE_SIZE) }
-        if (sa.size == 1)
-            return android.util.Log.println(priority, tag, sa[0])
-
-        var sum = android.util.Log.println(priority, tag, PREFIX_MULTILINE)
-        sa.forEach {
-            sum += android.util.Log.println(priority, tag, it)
-        }
-        return sum
+        return msg.split(LF)
+            .flatMap { it.splitSafe(MAX_LOG_LINE_BYTE_SIZE) }
+            .run {
+                when (size) {
+                    0 -> android.util.Log.println(priority, tag, PREFIX)
+                    1 -> android.util.Log.println(priority, tag, this[0])
+                    else -> map { android.util.Log.println(priority, tag, it) }.sum()
+                }
+            }
     }
 
-    @JvmStatic
-    fun println(vararg args: Any?) {
-        if (!LOG) return
+//    @JvmStatic
+//    fun println(priority: Int, tag: String, locator: String, msg: String?): Int {
+//        if (!LOG) return 0
+//
+//        flog(msg)
+//        msg ?: return android.util.Log.println(priority, tag, PREFIX)
+//
+//        val sa = msg.split(LF).flatMap { it.splitSafe(MAX_LOG_LINE_BYTE_SIZE) }
+//        if (sa.size == 1)
+//            return android.util.Log.println(priority, tag, sa[0])
+//
+//        var sum = android.util.Log.println(priority, tag, PREFIX_MULTILINE)
+//        sa.forEach {
+//            sum += android.util.Log.println(priority, tag, it)
+//        }
+//        return sum
+//    }
 
-        val info = getStack()
-        val tag = getTag(info)
-        val locator = getLocator(info)
-        val msg = _MESSAGE(*args)
-
-        val sa = msg.split(LF).flatMap { it.splitSafe(MAX_LOG_LINE_BYTE_SIZE) }
-        if (sa.isEmpty()) {
-            kotlin.io.println(tag + PREFIX)
-            return
-        }
-        if (sa.size == 1) {
-            kotlin.io.println(tag + sa[0])
-            return
-        }
-        kotlin.io.println(tag + PREFIX_MULTILINE)
-        sa.forEach {
-            kotlin.io.println(tag + it)
-        }
-    }
 
     @JvmStatic
     fun a(vararg args: Any?): Int {
@@ -262,7 +236,7 @@ object Log {
         val tag = getTag(info)
         val locator = getLocator(info)
         val msg = _MESSAGE(*args)
-        println(priority, tag, locator, msg)
+        internalPrintln(priority, tag, msg)
     }
 
     @JvmStatic
@@ -272,7 +246,7 @@ object Log {
         val tag = getTag(info)
         val locator = getLocator(info)
         val msg = _MESSAGE(*args)
-        println(priority, tag, locator, msg)
+        internalPrintln(priority, tag, msg)
     }
 
     @JvmStatic
@@ -282,7 +256,7 @@ object Log {
         val tag = getTag(info)
         val locator = getLocator(info)
         val msg = _MESSAGE(*args)
-        println(priority, tag, locator, msg)
+        internalPrintln(priority, tag, msg)
     }
 
     @JvmStatic
@@ -372,12 +346,10 @@ object Log {
     }
 
     private fun _DUMP(text: String): String = runCatching {
-        val s = text[0]
-        val e = text[text.length - 1]
-        when {
-            s == '[' && e == ']' -> JSONArray(text).toString(2)
-            s == '{' && e == '}' -> JSONObject(text).toString(2)
-            s == '<' && e == '>' -> PrettyXml.format(text)
+        when (text.first() to text.last()) {
+            '[' to ']' -> JSONArray(text).toString(2)
+            '{' to '}' -> JSONObject(text).toString(2)
+            '<' to '>' -> PrettyXml.format(text)
             else -> text
         }
     }.getOrDefault(text)
@@ -632,7 +604,8 @@ object Log {
             val log: String = _MESSAGE(*args)
             val st = StringTokenizer(log, LF, false)
 
-            val tag = "%-40s%-40d %-100s ``".format(Date().toString(), SystemClock.elapsedRealtime(), info.toString())
+            val tag =
+                "%-40s%-40d %-100s ``".format(Date().toString(), SystemClock.elapsedRealtime(), info.toString())
             if (st.hasMoreTokens()) {
                 val token = st.nextToken()
                 FILE_LOG!!.appendText(tag + token + LF)
@@ -738,7 +711,13 @@ object Log {
                                     )
                                     textBetweenElements.length <= lineLength * 0.5 -> sb.append(textBetweenElements)
                                         .also { singleLine = true }
-                                    else -> sb.append("\n" + lineWrap(textBetweenElements, lineLength, indent) + "\n")
+                                    else -> sb.append(
+                                        "\n" + lineWrap(
+                                            textBetweenElements,
+                                            lineLength,
+                                            indent
+                                        ) + "\n"
+                                    )
                                 }
                                 i = nextStartElementPos - 1
                             } else {
@@ -755,4 +734,30 @@ object Log {
     }
 
     class TraceLog : Throwable()
+
+
+    @VisibleForTesting
+    @JvmStatic
+    fun println(vararg args: Any?) {
+        if (!LOG) return
+
+        val info = getStack()
+        val tag = getTag(info)
+        val locator = getLocator(info)
+        val msg = _MESSAGE(*args)
+
+        val sa = msg.split(LF).flatMap { it.splitSafe(MAX_LOG_LINE_BYTE_SIZE) }
+        if (sa.isEmpty()) {
+            kotlin.io.println(tag + PREFIX)
+            return
+        }
+        if (sa.size == 1) {
+            kotlin.io.println(tag + sa[0])
+            return
+        }
+        kotlin.io.println(tag + PREFIX_MULTILINE)
+        sa.forEach {
+            kotlin.io.println(tag + it)
+        }
+    }
 }

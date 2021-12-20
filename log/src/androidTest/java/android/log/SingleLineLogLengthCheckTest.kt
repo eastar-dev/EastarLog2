@@ -46,16 +46,15 @@ class SingleLineLogLengthCheckTest {
         //tag 2byte
         //log 4063byte
     }
+    //Fatal
     @Test
-    fun getMaxTagLength_when_FatalNotException() {
+    fun getMaxTagLength_when_Fatal() {
         val logCount = 4040
         android.util.Log.e((1..logCount/10).joinToString("") { "%10d".format(it) }, "0")
         android.util.Log.e("1234567890".repeat(logCount/10), "0")
-
-        //no Fatal but nothing display
     }
     @Test
-    fun getMaxTagLength_when_Fatal() {
+    fun getMaxTagLength_when_NotFatalNotException() {
         val logCount = 4030
         android.util.Log.e((1..logCount/10).joinToString("") { "%10d".format(it) }, "0")
         android.util.Log.e("1234567890".repeat(logCount/10), "0")
@@ -63,7 +62,7 @@ class SingleLineLogLengthCheckTest {
         //no Fatal but nothing display
     }
     @Test
-    fun getMaxTagLength_when_FatalWithLargeLog() {
+    fun getMaxTagLength_when_NotFatalNotExceptionWithLog() {
         val logCount = 4030
         android.util.Log.e((1..logCount/10).joinToString("") { "%10d".format(it) }, "1234567890".repeat(logCount/10))
         android.util.Log.e("1234567890".repeat(logCount/10), "0")
@@ -71,7 +70,7 @@ class SingleLineLogLengthCheckTest {
         //no Fatal but nothing display
     }
     @Test
-    fun getMaxTagLength_when_noFatalDisplay() {
+    fun getMaxTagLength_when_NotFatalNotExceptionLimitDisplay() {
         val logCount = 3230
         android.util.Log.e((1..logCount/10).joinToString("") { "%10d".format(it) }, "0")
         android.util.Log.e("1234567890".repeat(logCount/10), "0")
