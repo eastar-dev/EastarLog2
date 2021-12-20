@@ -43,12 +43,15 @@ import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import java.lang.reflect.Method
+import java.nio.charset.Charset
 import java.text.SimpleDateFormat
 import java.util.Arrays
 import java.util.Date
 import java.util.Locale
 import java.util.StringTokenizer
 import java.util.concurrent.TimeUnit
+import kotlin.experimental.and
+import kotlin.experimental.inv
 
 /** @author eastar*/
 object Log {
@@ -72,10 +75,10 @@ object Log {
     fun getTag(stack: StackTraceElement = getStack()): String {
         val className = getClzMethod(stack)
         val locator = getLocator(stack)
-        var tag = (className + locator).takeLast(TAG_LONGTH).padStart(TAG_LONGTH, '.')
+        var tag = (className + locator).takeLast(TAG_LONGTH)
         while (tag.width != TAG_LONGTH) {
             tag = if (tag.width > TAG_LONGTH)
-                tag.drop(tag.width - TAG_LONGTH)
+                tag.drop(1)
             else
                 tag.padStart(TAG_LONGTH, '.')
         }
@@ -115,59 +118,72 @@ object Log {
         }
     }
 
+
+    @JvmStatic
+    fun println(priority: Int, tag: String?, msg: String?): Int {
+        if (!LOG) return 0
+
+        flog(msg)
+
+        msg ?: return android.util.Log.println(priority, tag, PREFIX)
+
+        return msg.split(LF)
+            .flatMap { it.splitSafe(MAX_LOG_LINE_BYTE_SIZE) }
+            .run {
+                when (size) {
+                    0 -> android.util.Log.println(priority, tag, PREFIX)
+                    1 -> android.util.Log.println(priority, tag, PREFIX + this[0])
+                    else -> {
+                        android.util.Log.println(priority, tag, PREFIX_MULTILINE)
+                        map { android.util.Log.println(priority, tag, PREFIX + it) }.sum()
+                    }
+                }
+            }
+    }
+
     @JvmStatic
     fun p(priority: Int, vararg args: Any?): Int {
         if (!LOG) return 0
         val info = getStack()
         val tag = getTag(info)
-        val locator = getLocator(info)
-        val msg = _MESSAGE(*args)
-        return internalPrintln(priority, tag, msg)
+        val msg = getMessage(*args)
+        return println(priority, tag, msg)
     }
 
     @JvmStatic
     fun ps(priority: Int, info: StackTraceElement, vararg args: Any?): Int {
         if (!LOG) return 0
         val tag = getTag(info)
-        val locator = getLocator(info)
-        val msg = _MESSAGE(*args)
-        return internalPrintln(priority, tag, msg)
+        val msg = getMessage(*args)
+        return println(priority, tag, msg)
     }
 
-
-    private fun internalPrintln(priority: Int, tag: String, msg: String?): Int {
-        if (!LOG) return 0
-        flog(msg)
-        msg ?: return android.util.Log.println(priority, tag, PREFIX)
-        return msg.split(LF)
-            .flatMap { it.splitSafe(MAX_LOG_LINE_BYTE_SIZE) }
-            .run {
-                when (size) {
-                    0 -> android.util.Log.println(priority, tag, PREFIX)
-                    1 -> android.util.Log.println(priority, tag, this[0])
-                    else -> map { android.util.Log.println(priority, tag, it) }.sum()
-                }
-            }
+    @JvmStatic
+    fun pn(priority: Int, depth: Int, vararg args: Any?) {
+        if (!LOG) return
+        val info = Exception().stackTrace[1 + depth]
+        val tag = getTag(info)
+        val msg = getMessage(*args)
+        println(priority, tag, msg)
     }
 
-//    @JvmStatic
-//    fun println(priority: Int, tag: String, locator: String, msg: String?): Int {
-//        if (!LOG) return 0
-//
-//        flog(msg)
-//        msg ?: return android.util.Log.println(priority, tag, PREFIX)
-//
-//        val sa = msg.split(LF).flatMap { it.splitSafe(MAX_LOG_LINE_BYTE_SIZE) }
-//        if (sa.size == 1)
-//            return android.util.Log.println(priority, tag, sa[0])
-//
-//        var sum = android.util.Log.println(priority, tag, PREFIX_MULTILINE)
-//        sa.forEach {
-//            sum += android.util.Log.println(priority, tag, it)
-//        }
-//        return sum
-//    }
+    @JvmStatic
+    fun pc(priority: Int, method: String, vararg args: Any?) {
+        if (!LOG) return
+        val info = getStackCaller(method)
+        val tag = getTag(info)
+        val msg = getMessage(*args)
+        println(priority, tag, msg)
+    }
 
+    @JvmStatic
+    fun pm(priority: Int, method: String, vararg args: Any?) {
+        if (!LOG) return
+        val info = getStackMethod(method)
+        val tag = getTag(info)
+        val msg = getMessage(*args)
+        println(priority, tag, msg)
+    }
 
     @JvmStatic
     fun a(vararg args: Any?): Int {
@@ -202,13 +218,8 @@ object Log {
     @JvmStatic
     fun v(vararg args: Any?): Int {
         if (!LOG) return 0
-        return p(VERBOSE, *args)
-    }
 
-    @JvmStatic
-    fun println(priority: Int, tag: String?, msg: String): Int {
-        if (!LOG) return 0
-        return p(priority, tag, msg)
+        return p(VERBOSE, *args)
     }
 
     @JvmStatic
@@ -230,40 +241,10 @@ object Log {
     }
 
     @JvmStatic
-    fun pn(priority: Int, depth: Int, vararg args: Any?) {
-        if (!LOG) return
-        val info = Exception().stackTrace[1 + depth]
-        val tag = getTag(info)
-        val locator = getLocator(info)
-        val msg = _MESSAGE(*args)
-        internalPrintln(priority, tag, msg)
-    }
-
-    @JvmStatic
-    fun pc(priority: Int, method: String, vararg args: Any?) {
-        if (!LOG) return
-        val info = getStackCaller(method)
-        val tag = getTag(info)
-        val locator = getLocator(info)
-        val msg = _MESSAGE(*args)
-        internalPrintln(priority, tag, msg)
-    }
-
-    @JvmStatic
-    fun pm(priority: Int, method: String, vararg args: Any?) {
-        if (!LOG) return
-        val info = getStackMethod(method)
-        val tag = getTag(info)
-        val locator = getLocator(info)
-        val msg = _MESSAGE(*args)
-        internalPrintln(priority, tag, msg)
-    }
-
-    @JvmStatic
     fun toast(context: Context, vararg args: Any?) {
         if (!LOG) return
         e(*args)
-        Toast.makeText(context, _MESSAGE(*args), Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, getMessage(*args), Toast.LENGTH_SHORT).show()
     }
 
     private var timeout: Long = 0
@@ -281,11 +262,11 @@ object Log {
     fun viewTree(parent: View, depth: Int = 0) {
         if (!LOG) return
         if (parent !is ViewGroup)
-            return pn(android.util.Log.ERROR, depth + 2, _DUMP(parent, 0))
+            return pn(ERROR, depth + 2, _DUMP(parent, 0))
 
         for (i in 0 until parent.childCount) {
             val child = parent.getChildAt(i)
-            pn(android.util.Log.ERROR, depth + 2, _DUMP(child, depth))
+            pn(ERROR, depth + 2, _DUMP(child, depth))
             if (child is ViewGroup)
                 viewTree(child, depth + 1)
         }
@@ -319,7 +300,7 @@ object Log {
     }
 
     /** dump */
-    private fun _MESSAGE(vararg args: Any?): String {
+    private fun getMessage(vararg args: Any?): String {
         if (args.isNullOrEmpty())
             return ""
 
@@ -530,7 +511,7 @@ object Log {
             val s = SEED_S
             val interval = if (SEED_S == 0L) 0L else e - s
             SEED_S = e
-            e(String.format(Locale.getDefault(), "%,15d", interval), _MESSAGE(*args))
+            e(String.format(Locale.getDefault(), "%,15d", interval), getMessage(*args))
         }
     }
 
@@ -601,7 +582,7 @@ object Log {
         FILE_LOG ?: return
         runCatching {
             val info = getStack()
-            val log: String = _MESSAGE(*args)
+            val log: String = getMessage(*args)
             val st = StringTokenizer(log, LF, false)
 
             val tag =
@@ -735,7 +716,6 @@ object Log {
 
     class TraceLog : Throwable()
 
-
     @VisibleForTesting
     @JvmStatic
     fun println(vararg args: Any?) {
@@ -744,7 +724,7 @@ object Log {
         val info = getStack()
         val tag = getTag(info)
         val locator = getLocator(info)
-        val msg = _MESSAGE(*args)
+        val msg = getMessage(*args)
 
         val sa = msg.split(LF).flatMap { it.splitSafe(MAX_LOG_LINE_BYTE_SIZE) }
         if (sa.isEmpty()) {
@@ -761,3 +741,54 @@ object Log {
         }
     }
 }
+
+//etc
+val String.width get() = toByteArray(Charset.forName("euc-kr")).size
+
+fun String.takeSafe(lengthByte: Int, startOffset: Int = 0): String {
+    require(lengthByte >= 3) { "min split length getter then 3" }
+    val textByteArray = toByteArray()
+    if (textByteArray.size <= lengthByte)
+        return this
+
+    return textByteArray.takeSafe(lengthByte, startOffset)
+}
+
+fun String.splitSafe(lengthByte: Int): List<String> {
+    require(lengthByte >= 3) { "min split length getter then 3" }
+    val textByteArray = toByteArray()
+    if (textByteArray.size <= lengthByte)
+        return listOf(this)
+
+    val tokens = mutableListOf<String>()
+    var startOffset = 0
+    while (startOffset + lengthByte < textByteArray.size) {
+        val token = textByteArray.takeSafe(lengthByte, startOffset)
+        tokens += token
+        startOffset += token.toByteArray().size
+    }
+    tokens += String(textByteArray, startOffset, textByteArray.size - startOffset)
+    return tokens
+}
+
+private fun ByteArray.takeSafe(lengthByte: Int, startOffset: Int): String {
+    //0xc0 : 1100 0000
+    //0x80 : 1000 0000
+    val textByteArray: ByteArray = this
+    val position = startOffset + lengthByte - 1
+    return if (textByteArray[position] and 0x80.toByte() == 0x00.toByte()) {
+        String(textByteArray, startOffset, lengthByte)
+    } else {
+        var offset = 0
+        while (textByteArray[position - offset] and 0xc0.toByte() == 0x80.toByte()) offset++
+        val charByteLengthCurrentPosition = offset + 1
+        val charByteLength = textByteArray[position - offset].inv().countLeadingZeroBits()
+
+        if (charByteLengthCurrentPosition == charByteLength) {
+            String(textByteArray, startOffset, lengthByte)
+        } else {
+            String(textByteArray, startOffset, lengthByte - charByteLengthCurrentPosition)
+        }
+    }
+}
+
