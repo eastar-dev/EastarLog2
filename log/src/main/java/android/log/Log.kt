@@ -745,16 +745,7 @@ object Log {
 //etc
 val String.width get() = toByteArray(Charset.forName("euc-kr")).size
 
-fun String.takeSafe(lengthByte: Int, startOffset: Int = 0): String {
-    require(lengthByte >= 3) { "min split length getter then 3" }
-    val textByteArray = toByteArray()
-    if (textByteArray.size <= lengthByte)
-        return this
-
-    return textByteArray.takeSafe(lengthByte, startOffset)
-}
-
-fun String.splitSafe(lengthByte: Int): List<String> {
+private fun String.splitSafe(lengthByte: Int): List<String> {
     require(lengthByte >= 3) { "min split length getter then 3" }
     val textByteArray = toByteArray()
     if (textByteArray.size <= lengthByte)
@@ -792,3 +783,11 @@ private fun ByteArray.takeSafe(lengthByte: Int, startOffset: Int): String {
     }
 }
 
+private fun String.takeSafe(lengthByte: Int, startOffset: Int = 0): String {
+    require(lengthByte >= 3) { "min split length getter then 3" }
+    val textByteArray = toByteArray()
+    if (textByteArray.size <= lengthByte)
+        return this
+
+    return textByteArray.takeSafe(lengthByte, startOffset)
+}
