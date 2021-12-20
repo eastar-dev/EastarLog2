@@ -723,7 +723,6 @@ object Log {
 
         val info = getStack()
         val tag = getTag(info)
-        val locator = getLocator(info)
         val msg = getMessage(*args)
 
         val sa = msg.split(LF).flatMap { it.splitSafe(MAX_LOG_LINE_BYTE_SIZE) }
