@@ -77,15 +77,20 @@ object Log {
     fun getTag(stack: StackTraceElement = getStack()): String {
         val className = getClzMethod(stack)
         val locator = getLocator(stack)
-        var tag = (className + locator).takeLast(TAG_LONGTH)
-        while (tag.width != TAG_LONGTH) {
-            tag = if (tag.width > TAG_LONGTH)
-                tag.drop(1)
-            else
-                tag.padStart(TAG_LONGTH, '.')
-        }
-        return tag
+        return (className + locator).toTag
     }
+
+    val String.toTag: String
+        get() {
+            var tag = takeLast(TAG_LONGTH)
+            while (tag.width != TAG_LONGTH) {
+                tag = if (tag.width > TAG_LONGTH)
+                    tag.drop(1)
+                else
+                    tag.padStart(TAG_LONGTH, '.')
+            }
+            return tag
+        }
 
     private fun getLocator(info: StackTraceElement) = ".(%s:%d)".format(info.fileName, info.lineNumber)
 
@@ -97,6 +102,8 @@ object Log {
     private fun getStack(): StackTraceElement {
         return Exception().stackTrace.filterNot {
             it.className == javaClass.name
+        }.filterNot {
+            it.className.matches(LOG_PASS_REGEX)
         }.filterNot {
             it.lineNumber < 0
         }.first()
@@ -148,6 +155,14 @@ object Log {
         if (!LOG) return 0
         val info = getStack()
         val tag = getTag(info)
+        val msg = getMessage(*args)
+        return println(priority, tag, msg)
+    }
+
+    @JvmStatic
+    fun p(priority: Int, tag: String, vararg args: Any?): Int {
+        if (!LOG) return 0
+        val info = getStack()
         val msg = getMessage(*args)
         return println(priority, tag, msg)
     }
