@@ -1,5 +1,4 @@
-package android.log
-
+import android.log.Log
 import org.junit.Test
 import kotlin.random.Random
 

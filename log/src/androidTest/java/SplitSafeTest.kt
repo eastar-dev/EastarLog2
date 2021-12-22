@@ -1,5 +1,3 @@
-package android.log
-
 import android.log.Log.splitSafe
 import org.junit.Test
 
@@ -12,6 +10,17 @@ class SplitSafeTest {
 
         repeat(10) {
             val tokens = text.splitSafe(it + 3)
+            android.util.Log.i("_", tokens.toString())
+        }
+    }
+
+    @Test
+    fun splitSafeSpeedTest1() {
+        val text = "가1나23다라456마바아자".repeat(100)
+        android.util.Log.e("_", "" + text.toByteArray().size)
+
+        repeat(10) {
+            val tokens = text.splitSafe(it % 30 + 3)
             android.util.Log.i("_", tokens.toString())
         }
     }
