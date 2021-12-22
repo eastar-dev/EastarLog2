@@ -1,7 +1,4 @@
-package android.log
-
 import org.junit.Test
-import java.nio.charset.Charset
 
 class AndroidLogcatLogTest {
 

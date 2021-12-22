@@ -702,9 +702,7 @@ object Log {
 
 
     //etc
-
-
-    private fun String.splitSafe(lengthByte: Int): List<String> {
+    fun String.splitSafe(lengthByte: Int): List<String> {
         require(lengthByte >= 3) { "min split length getter then 3" }
         val textByteArray = toByteArray()
         if (textByteArray.size <= lengthByte)
