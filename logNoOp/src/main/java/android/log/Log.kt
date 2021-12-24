@@ -19,7 +19,9 @@
 package android.log
 
 import android.content.Context
+import android.database.Cursor
 import android.graphics.Bitmap
+import android.net.Uri
 import android.view.MotionEvent
 import android.view.View
 import java.io.File
@@ -37,59 +39,31 @@ object Log {
 
     fun outputSystem() = Unit
 
-    @JvmStatic
-    fun p(priority: Int, vararg args: Any?) = Unit
+    fun getTag(stack: StackTraceElement = StackTraceElement("", "", "", 0)): String = ""
+
+    fun String.takeLastSafe(length: Int): String = ""
 
     @JvmStatic
-    fun ps(priority: Int, info: StackTraceElement, vararg args: Any?) = Unit
+    fun p(priority: Int, vararg args: Any?): Int = 0
 
     @JvmStatic
-    fun println(priority: Int, tag: String, locator: String, msg: String?) = Unit
+    fun pt(priority: Int, tag: String, vararg args: Any?): Int = 0
 
     @JvmStatic
-    fun println(priority: Int, tag: String?, msg: String) = Unit
+    fun ps(priority: Int, info: StackTraceElement, vararg args: Any?): Int = 0
 
     @JvmStatic
-    fun println(vararg args: Any?) = Unit
+    fun pn(priority: Int, depth: Int, vararg args: Any?): Int = 0
 
     @JvmStatic
-    fun a(vararg args: Any?) = Unit
+    fun pc(priority: Int, method: String, vararg args: Any?): Int = 0
 
     @JvmStatic
-    fun e(vararg args: Any?) = Unit
-
-    @JvmStatic
-    fun w(vararg args: Any?) = Unit
-
-    @JvmStatic
-    fun i(vararg args: Any?) = Unit
-
-    @JvmStatic
-    fun d(vararg args: Any?) = Unit
-
-    @JvmStatic
-    fun v(vararg args: Any?) = Unit
-
-    @JvmStatic
-    fun printStackTrace() = Unit
-
-    @JvmStatic
-    fun printStackTrace(th: Throwable) = Unit
-
-    @JvmStatic
-    fun getStackTraceString(th: Throwable) = ""
-
-    @JvmStatic
-    fun pn(priority: Int, depth: Int, vararg args: Any?) = Unit
-
-    @JvmStatic
-    fun pc(priority: Int, method: String, vararg args: Any?) = Unit
-
-    @JvmStatic
-    fun pm(priority: Int, method: String, vararg args: Any?) = Unit
+    fun pm(priority: Int, method: String, vararg args: Any?): Int = 0
 
     @JvmStatic
     fun toast(context: Context, vararg args: Any?) = Unit
+
 
     @JvmStatic
     fun debounce(vararg args: Any?) = Unit
@@ -107,17 +81,20 @@ object Log {
     fun _toByteArray(hexString: String): ByteArray = byteArrayOf()
 
     @JvmStatic
-    fun _DUMP_object(o: Any?) = ""
+    fun _DUMP_object(o: Any?): String = ""
+
+    fun provider(context: Context, uri: Uri?) = Unit
+
+    var SEED_S = 0L
 
     @JvmStatic
-    fun tic_s() = Unit
+    fun tic(vararg args: Any? = arrayOf("")) = Unit
 
-    @JvmStatic
-    fun tic() = Unit
+    private fun cursor(c: Cursor?) = Unit
 
-    @JvmStatic
-    fun tic(vararg args: String) = Unit
-
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //image save
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
     @JvmStatic
     fun compress(name: String, data: ByteArray) = Unit
 
@@ -130,8 +107,45 @@ object Log {
 
     fun measure(widthMeasureSpec: Int, heightMeasureSpec: Int) = Unit
 
+
     @JvmStatic
     fun onTouchEvent(event: MotionEvent) = Unit
 
     class TraceLog : Throwable()
+
+
+    //etc
+    fun String.splitSafe(lengthByte: Int): List<String> = emptyList()
+
+    /////////////////////////////////////////////////////////////////////////////
+    //over lap func
+    @JvmStatic
+    fun println(priority: Int, tag: String?, msg: String?): Int = 0
+
+    @JvmStatic
+    fun a(vararg args: Any?): Int = 0
+
+    @JvmStatic
+    fun e(vararg args: Any?): Int = 0
+
+    @JvmStatic
+    fun w(vararg args: Any?): Int = 0
+
+    @JvmStatic
+    fun i(vararg args: Any?): Int = 0
+
+    @JvmStatic
+    fun d(vararg args: Any?): Int = 0
+
+    @JvmStatic
+    fun v(vararg args: Any?): Int = 0
+
+    @JvmStatic
+    fun printStackTrace() = Unit
+
+    @JvmStatic
+    fun printStackTrace(th: Throwable) = Unit
+
+    @JvmStatic
+    fun getStackTraceString(th: Throwable): String = ""
 }
