@@ -1,20 +1,8 @@
 import android.log.Log
 import org.junit.Test
-import kotlin.random.Random
 
-class LogcatLogTest {
+class EastarLog2Test {
 
-    @Test
-    fun getLogTest() {
-        repeat(20) {
-            val text1 = "가1나23다라456마바아자".repeat(Random.nextInt(0, 200))
-            Log.e(text1)
-            val text2 = "가1나23다라456마바아자".repeat(Random.nextInt(0, 200))
-            Log.w(text2)
-            val text3 = "가1나23다라456마바아자".repeat(Random.nextInt(0, 200))
-            Log.i(text3)
-        }
-    }
 
     @Test
     fun tagTest() {
@@ -45,12 +33,12 @@ class LogcatLogTest {
 
     @Suppress("NonAsciiCharacters", "TestFunctionName")
     fun 이것은_한글_함수_테스트_입니다() {
-        Log.w("함수명 '이것은_한글_함수_테스트_입니다' 길어서 앞부분이 짤립니다.")
+        Log.w("한글이 짤리면 한글 중간을 인식해서 '.'로 변경합니다.")
     }
 
     @Suppress("NonAsciiCharacters", "TestFunctionName")
     fun 이것은_한글함수_테스트_입니다() {
-        Log.w("한글이 짤리면 한글 중간을 인식해서 '.'로 변경합니다.")
+        Log.w("함수명 '이것은_한글_함수_테스트_입니다' 길어서 앞부분이 짤립니다.")
     }
 
     fun length1() = Log.i("길이가 길어질수록 앞부분이 짤립니다.")
@@ -63,4 +51,12 @@ class LogcatLogTest {
     fun length12345678() = Log.i("길이가 길어질수록 앞부분이 짤립니다.")
     fun length123456789() = Log.i("길이가 길어질수록 앞부분이 짤립니다.")
     fun length1234567890() = Log.i("길이가 길어질수록 앞부분이 짤립니다.")
+
+    @Test
+    fun getLogTest() {
+        val text1 = "가1나23다라456마바아"
+        Log.e(text1)
+        val text2 = "가1나23다라456마바아".repeat(300)
+        Log.w(text2)
+    }
 }

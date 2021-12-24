@@ -77,20 +77,19 @@ object Log {
     fun getTag(stack: StackTraceElement = getStack()): String {
         val className = getClzMethod(stack)
         val locator = getLocator(stack)
-        return (className + locator).toTag
+        return (className + locator).takeLastSafe()
     }
 
-    val String.toTag: String
-        get() {
-            var tag = takeLast(TAG_LONGTH)
-            while (tag.width != TAG_LONGTH) {
-                tag = if (tag.width > TAG_LONGTH)
-                    tag.drop(1)
-                else
-                    tag.padStart(TAG_LONGTH, '.')
-            }
-            return tag
+    fun String.takeLastSafe(length: Int = TAG_LONGTH): String {
+        var tag = takeLast(length)
+        while (tag.width != length) {
+            tag = if (tag.width > length)
+                tag.drop(1)
+            else
+                tag.padStart(length, '.')
         }
+        return tag
+    }
 
     private fun getLocator(info: StackTraceElement) = ".(%s:%d)".format(info.fileName, info.lineNumber)
 
