@@ -12,6 +12,7 @@ android {
     defaultConfig {
         minSdkVersion 19
         targetSdkVersion 31
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
@@ -21,6 +22,9 @@ android {
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.4.0'
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test:runner:1.4.0'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
 }
 //https://developer.android.com/studio/build/maven-publish-plugin
 //run gradle publishToMavenLocal
