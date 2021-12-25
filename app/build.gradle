@@ -40,16 +40,46 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'
 }
+
 android {
     configurations.all {
         resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
     }
 }
+
+//keystore sign
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('release/key.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+android {
+    signingConfigs {
+        sign {
+            keyAlias keystoreProperties['keyAlias']
+            keyPassword keystoreProperties['keyPassword']
+            storeFile file(keystoreProperties['storeFile'])
+            storePassword keystoreProperties['storePassword']
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.sign
+        }
+        release {
+            signingConfig signingConfigs.sign
+        }
+    }
+}
+
 //log
 repositories {
     maven { url 'https://jitpack.io' }
 }
 dependencies {
-    debugImplementation 'com.github.eastar-dev.EastarLog2:log:-SNAPSHOT'
-    releaseImplementation 'com.github.eastar-dev.EastarLog2:logNoOp:-SNAPSHOT'
+//    debugImplementation 'com.github.eastar-dev.EastarLog2:log:ed2da3a1f4'
+//    releaseImplementation 'com.github.eastar-dev.EastarLog2:logNoOp:ed2da3a1f4'
+    debugImplementation project(path: ':log')
+    releaseImplementation project(path: ':logNoOp')
 }

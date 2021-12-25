@@ -1,4 +1,4 @@
-package dev.eastar.log
+package dev.eastar.log.demo
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
