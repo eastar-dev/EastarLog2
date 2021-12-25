@@ -37,7 +37,8 @@ object Log {
     var LOG = false
     var FILE_LOG: File? = null
 
-    fun outputSystem() = Unit
+    var logFilterClassNameRegex: Regex = "^android\\..+|^com\\.android\\..+|^java\\..+".toRegex()
+    var logFilterPredicate: (StackTraceElement) -> Boolean = { false }
 
     fun getTag(stack: StackTraceElement = StackTraceElement("", "", "", 0)): String = ""
 
@@ -113,7 +114,7 @@ object Log {
 
     class TraceLog : Throwable()
 
-
+    fun println(vararg args: Any?) = Unit
     //etc
     fun String.splitSafe(lengthByte: Int): List<String> = emptyList()
 

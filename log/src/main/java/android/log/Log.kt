@@ -70,7 +70,9 @@ object Log {
     private const val TAG_LONGTH = 50
     private const val MAX_LOG_LINE_BYTE_SIZE = 3600
 
-    private var LOG_PASS_REGEX = "^android\\..+|^com\\.android\\..+|^java\\..+".toRegex()
+    private var defaultLogFilterClassNameRegex: Regex = "^android\\..+|^com\\.android\\..+|^java\\..+".toRegex()
+    var logFilterClassNameRegex: Regex = "".toRegex()
+    var logFilterPredicate: (StackTraceElement) -> Boolean = { false }
 
     private val String.width get() = toByteArray(Charset.forName("euc-kr")).size
 
@@ -95,15 +97,16 @@ object Log {
 
     private fun getClzMethod(info: StackTraceElement): String = runCatching {
         info.className.takeLastWhile { it != '.' } + "::" + info.methodName
-//            info.className.takeLastWhile { it != '.' }.replace('$', '.')
     }.getOrDefault(info.className)
 
     private fun getStack(): StackTraceElement {
         return Exception().stackTrace.filterNot {
             it.className == javaClass.name
         }.filterNot {
-            it.className.matches(LOG_PASS_REGEX)
+            it.className.matches(defaultLogFilterClassNameRegex)
         }.filterNot {
+            it.className.matches(logFilterClassNameRegex)
+        }.filterNot(logFilterPredicate).filterNot {
             it.lineNumber < 0
         }.first()
     }
@@ -111,7 +114,7 @@ object Log {
     private fun getStackMethod(methodNameKey: String): StackTraceElement {
         return Exception().stackTrace.filterNot {
             it.className == javaClass.name
-        }.run {
+        }.filterNot(logFilterPredicate).run {
             lastOrNull {
                 it.methodName == methodNameKey
             } ?: last()
@@ -121,7 +124,7 @@ object Log {
     private fun getStackCaller(methodNameKey: String): StackTraceElement {
         return Exception().stackTrace.filterNot {
             it.className == javaClass.name
-        }.run {
+        }.filterNot(logFilterPredicate).run {
             getOrNull(indexOfLast { it.methodName == methodNameKey } + 1) ?: last()
         }
     }
