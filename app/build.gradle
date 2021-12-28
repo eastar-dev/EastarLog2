@@ -78,8 +78,6 @@ repositories {
     maven { url 'https://jitpack.io' }
 }
 dependencies {
-//    debugImplementation 'com.github.eastar-dev.EastarLog2:log:090ad0be49'
-//    releaseImplementation 'com.github.eastar-dev.EastarLog2:logNoOp:090ad0be49'
-    debugImplementation project(path: ':log')
-    releaseImplementation project(path: ':logNoOp')
+    debugImplementation 'com.github.eastar-dev.EastarLog2:log:2.2.3'
+    releaseImplementation 'com.github.eastar-dev.EastarLog2:logNoOp:2.2.3'
 }
