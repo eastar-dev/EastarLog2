@@ -102,30 +102,32 @@ object Log {
     private fun getStack(): StackTraceElement {
         return Exception().stackTrace.filterNot {
             it.className == javaClass.name
-        }.filterNot {
-            it.className.matches(defaultLogFilterClassNameRegex)
-        }.filterNot {
-            it.className.matches(logFilterClassNameRegex)
-        }.filterNot(logFilterPredicate).filterNot {
-            it.lineNumber < 0
-        }.first()
+        }.run {
+            asSequence().filterNot {
+                it.className.matches(defaultLogFilterClassNameRegex)
+            }.filterNot {
+                it.className.matches(logFilterClassNameRegex)
+            }.filterNot(logFilterPredicate).filterNot {
+                it.lineNumber < 0
+            }.firstOrNull() ?: first()
+        }
     }
 
     private fun getStackMethod(methodNameKey: String): StackTraceElement {
         return Exception().stackTrace.filterNot {
             it.className == javaClass.name
-        }.filterNot(logFilterPredicate).run {
-            lastOrNull {
-                it.methodName == methodNameKey
-            } ?: last()
+        }.run {
+            filterNot(logFilterPredicate)
+                .lastOrNull { it.methodName == methodNameKey } ?: last()
         }
     }
 
     private fun getStackCaller(methodNameKey: String): StackTraceElement {
         return Exception().stackTrace.filterNot {
             it.className == javaClass.name
-        }.filterNot(logFilterPredicate).run {
-            getOrNull(indexOfLast { it.methodName == methodNameKey } + 1) ?: last()
+        }.run {
+            filterNot(logFilterPredicate)
+                .getOrNull(indexOfLast { it.methodName == methodNameKey } + 1) ?: last()
         }
     }
 
