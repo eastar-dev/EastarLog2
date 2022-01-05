@@ -21,8 +21,12 @@ package android.log
 import android.content.Context
 import android.content.Intent
 import android.database.Cursor
-import android.graphics.*
+import android.graphics.Bitmap
 import android.graphics.Bitmap.CompressFormat
+import android.graphics.BitmapFactory
+import android.graphics.Point
+import android.graphics.Rect
+import android.graphics.RectF
 import android.net.Uri
 import android.os.Bundle
 import android.os.SystemClock
@@ -41,9 +45,11 @@ import java.io.FileOutputStream
 import java.lang.reflect.Method
 import java.nio.charset.Charset
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Arrays
+import java.util.Date
+import java.util.Locale
+import java.util.StringTokenizer
 import java.util.concurrent.TimeUnit
-import kotlin.collections.HashSet
 import kotlin.experimental.and
 import kotlin.experimental.inv
 

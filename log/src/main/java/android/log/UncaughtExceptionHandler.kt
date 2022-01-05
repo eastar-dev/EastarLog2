@@ -16,7 +16,8 @@ import androidx.core.view.drawToBitmap
 import java.io.File
 import java.lang.ref.WeakReference
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
+import java.util.Locale
 
 class UncaughtExceptionHandler(
     context: Context,
