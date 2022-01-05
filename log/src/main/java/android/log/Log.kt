@@ -74,23 +74,11 @@ object Log {
     var logFilterClassNameRegex: Regex = "".toRegex()
     var logFilterPredicate: (StackTraceElement) -> Boolean = { false }
 
-    private val String.width get() = toByteArray(Charset.forName("euc-kr")).size
 
     fun getTag(stack: StackTraceElement = getStack()): String {
         val className = getClzMethod(stack)
         val locator = getLocator(stack)
         return (className + locator).takeLastSafe()
-    }
-
-    fun String.takeLastSafe(length: Int = TAG_LONGTH): String {
-        var tag = takeLast(length)
-        while (tag.width != length) {
-            tag = if (tag.width > length)
-                tag.drop(1)
-            else
-                tag.padStart(length, '.')
-        }
-        return tag
     }
 
     private fun getLocator(info: StackTraceElement) = ".(%s:%d)".format(info.fileName, info.lineNumber)
@@ -706,6 +694,18 @@ object Log {
 
 
     //etc
+    private val String.width get() = toByteArray(Charset.forName("euc-kr")).size
+    fun String.takeLastSafe(length: Int = TAG_LONGTH): String {
+        var text = takeLast(length)
+        while (text.width != length) {
+            text = if (text.width > length)
+                text.drop(1)
+            else
+                text.padStart(length - text.width + text.length, '.')
+        }
+        return text
+    }
+
     fun String.splitSafe(lengthByte: Int): List<String> {
         require(lengthByte >= 3) { "min split length getter then 3" }
         val textByteArray = toByteArray()
@@ -723,35 +723,41 @@ object Log {
         return tokens
     }
 
-    private fun ByteArray.takeSafe(lengthByte: Int, startOffset: Int): String {
-        //0xc0 : 1100 0000
-        //0x80 : 1000 0000
-        val textByteArray: ByteArray = this
-        val position = startOffset + lengthByte - 1
-        return if (textByteArray[position] and 0x80.toByte() == 0x00.toByte()) {
-            String(textByteArray, startOffset, lengthByte)
-        } else {
-            var offset = 0
-            while (textByteArray[position - offset] and 0xc0.toByte() == 0x80.toByte()) offset++
-            val charByteLengthCurrentPosition = offset + 1
-            val charByteLength = textByteArray[position - offset].inv().countLeadingZeroBits()
+    //0xc0 : 1100 0000
+    //0x80 : 1000 0000
+    fun ByteArray.takeSafe(lengthByte: Int, startOffset: Int): String {
+        if (size <= startOffset)
+            return ""
 
-            if (charByteLengthCurrentPosition == charByteLength) {
-                String(textByteArray, startOffset, lengthByte)
-            } else {
-                String(textByteArray, startOffset, lengthByte - charByteLengthCurrentPosition)
-            }
-        }
+        //앞에서 문자중간을 건너뜀
+        var offset = startOffset
+        while (size > offset && get(offset) and 0b1100_0000.toByte() == 0b1000_0000.toByte())
+            offset++
+
+        //문자열 길이가 짧은경우 끝까지
+        if (size <= offset + lengthByte)
+            return String(this, offset, size - offset)
+
+        //char 중간이 아니면 거기까지
+        if (get(offset + lengthByte) and 0b1100_0000.toByte() != 0b1000_0000.toByte())
+            return String(this, offset, lengthByte)
+
+        //char 중간이거나 끝이면 앞으로 땡김
+        var position = offset + lengthByte
+        while (get(--position) and 0b1100_0000.toByte() == 0b1000_0000.toByte()) Unit
+
+        val charByteMoveCount = offset + lengthByte - position
+        val charByteLength = get(position).inv().countLeadingZeroBits()
+
+        return if (charByteLength == charByteMoveCount)
+        //char 끝이면 거기까지
+            String(this, offset, lengthByte)
+        else
+        //char 중간이면 뒤에버림
+            String(this, offset, position - offset)
     }
 
-    private fun String.takeSafe(lengthByte: Int, startOffset: Int = 0): String {
-        require(lengthByte >= 3) { "min split length getter then 3" }
-        val textByteArray = toByteArray()
-        if (textByteArray.size <= lengthByte)
-            return this
-
-        return textByteArray.takeSafe(lengthByte, startOffset)
-    }
+    fun String.takeSafe(lengthByte: Int, startOffset: Int = 0) = toByteArray().takeSafe(lengthByte, startOffset)
 
     /////////////////////////////////////////////////////////////////////////////
     //over lap func
@@ -801,7 +807,7 @@ object Log {
     @JvmStatic
     fun printStackTrace() {
         if (!LOG) return
-        TraceLog().printStackTrace()
+        Log.TraceLog().printStackTrace()
     }
 
     @JvmStatic

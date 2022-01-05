@@ -1,8 +1,14 @@
 import android.log.Log
+import dev.eastar.log.demo.MainActivity.Companion.getMaxLogLength_when_tag1Byte
 import org.junit.Test
 
 class EastarLog2TestApp {
 
+
+    @Test
+    fun getMaxLogLength_when_tag1Byte_JUnit() {
+        getMaxLogLength_when_tag1Byte()
+    }
 
     @Test
     fun tagTest() {
@@ -59,4 +65,6 @@ class EastarLog2TestApp {
         val text2 = "가1나23다라456마바아".repeat(300)
         Log.w(text2)
     }
+
+
 }

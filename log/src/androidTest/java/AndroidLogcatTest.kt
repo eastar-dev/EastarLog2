@@ -1,5 +1,6 @@
 import android.log.Log.splitSafe
 import android.log.Log.takeLastSafe
+import android.log.Log.takeSafe
 import org.junit.Ignore
 import org.junit.Test
 import java.nio.charset.Charset
@@ -127,11 +128,24 @@ class AndroidLogcatTest {
     fun tagTakeLast50Byte() {
         android.util.Log.e((1..8).joinToString("") { "%10d".format(it) } + "....", "~")
         android.util.Log.e("1234567890".repeat(8) + "1234", "~")
-        android.util.Log.e("1234567890", "length : " + "1234567890".length)
-        android.util.Log.e("1234567890", "utf8  byte : " + "1234567890".toByteArray().size)
         repeat(3) {
             val tag = "가1나23다라456마바사789".repeat(it + 1)
             android.util.Log.e(tag.takeLastSafe(50), "~")
+        }
+    }
+
+    //tag 길이 정렬
+    @Test
+    fun tagTakeLastSafe() {
+        android.util.Log.e("~".padStart(5), (1..8).joinToString("") { "%10d".format(it) })
+        android.util.Log.e("~".padStart(5), "1234567890".repeat(8))
+        repeat(10) {
+            val tag = "가1나23다라456마바사789"
+            android.util.Log.e("~$it".padStart(5), tag.takeLastSafe(it))
+        }
+        repeat(10) {
+            val tag = "가1나23다라456마바사789"
+            android.util.Log.e("~$it".padStart(5), tag.takeLastSafe(it + 15))
         }
     }
 
@@ -146,6 +160,39 @@ class AndroidLogcatTest {
         repeat(10) {
             val tokens = text.splitSafe(it + 3)
             android.util.Log.i("~", tokens.toString())
+        }
+    }
+
+
+    @Test
+    fun takeSafe_last_save_cut_Test() {
+        //0xc0 : 1100 0000
+        //0xc1 : 1100 0001
+        android.util.Log.e("~", (1..8).joinToString("") { "%10d".format(it) })
+        android.util.Log.e("~", "1234567890".repeat(8))
+
+        val text = "가1나23다라456마바아자"
+        android.util.Log.i("~", "$text : ${text.toByteArray().size}byte")
+
+        repeat(30) {
+            val tokens = text.takeSafe(it + 10)
+            android.util.Log.i("~", "$tokens~${it + 10}")
+        }
+    }
+
+    @Test
+    fun takeSafe_first_save_cut_Test() {
+        //0xc0 : 1100 0000
+        //0xc1 : 1100 0001
+        android.util.Log.e("~", (1..8).joinToString("") { "%10d".format(it) })
+        android.util.Log.e("~", "1234567890".repeat(8))
+
+        val text = "가1나23다라456마바아자"
+        android.util.Log.i("~", "$text : ${text.toByteArray().size}byte")
+
+        repeat(35) {
+            val tokens = text.takeSafe(10, it)
+            android.util.Log.i("~", "$tokens~${tokens.toByteArray().size}")
         }
     }
 
