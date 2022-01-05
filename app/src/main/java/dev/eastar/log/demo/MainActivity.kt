@@ -3,7 +3,6 @@ package dev.eastar.log.demo
 import android.content.Intent
 import android.log.Log
 import android.log.LogActivity
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
@@ -47,6 +46,8 @@ class MainActivity : LogActivity() {
         })
 
         logTest()
+
+        getMaxLogLength_when_tag1Byte()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -97,4 +98,17 @@ class MainActivity : LogActivity() {
     private fun length12345678() = Log.i("길이가 길어질수록 앞부분이 짤립니다.")
     private fun length123456789() = Log.i("길이가 길어질수록 앞부분이 짤립니다.")
     private fun length1234567890() = Log.i("길이가 길어질수록 앞부분이 짤립니다.")
+
+    companion object {
+
+        fun getMaxLogLength_when_tag1Byte() {
+            val logCount = 5000
+            android.util.Log.e("~", (1..logCount / 10).joinToString("") { "%10d".format(it) })
+            android.util.Log.e("~", "1234567890".repeat(logCount / 10))
+            android.util.Log.e("~~", "1234567890".repeat(logCount / 10))
+            //tag 1
+            //log 4064
+        }
+    }
+
 }
