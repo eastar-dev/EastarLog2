@@ -1,4 +1,18 @@
 import android.log.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.reduce
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
 class EastarLog2Test {
@@ -58,5 +72,119 @@ class EastarLog2Test {
         Log.e(text1)
         val text2 = "가1나23다라456마바아".repeat(300)
         Log.w(text2)
+    }
+
+
+    @Test
+    fun getFlowLogTest() {
+        runBlocking {
+            flow {
+                emit(setOf(1, 2, 3))
+                Log.w("emit(setOf(1, 2, 3))")
+                emit(setOf(4, 2, 3))
+                Log.w("emit(setOf(4, 2, 3))")
+            }.reduce { old, new ->
+                Log.w("old", old)
+                Log.w("new", new)
+                val added = new - old
+                val deleted = old - new
+                Log.w("add", added)
+                Log.w("delete", deleted)
+
+                new
+            }
+        }
+    }
+
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun getFlowLogTest2() {
+        runTest {
+            SharedFlowTester().apply {
+                emitTest()
+                reduce()
+                emitTest()
+            }
+        }
+    }
+
+    @Test
+    fun xmlLogTest() {
+       val xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\n\n" +
+           "<root>" +
+           "<tag>" +
+           "<nested>" +
+           "hello</nested>" +
+           "</tag>" +
+           "</root>"
+
+        Log.e(Log.prettyXml(xml))
+    }
+}
+
+
+class SharedFlowTester {
+
+    val _flow = MutableSharedFlow<Set<Int>>()
+    val flow = _flow.asSharedFlow()
+    fun reduce() {
+        CoroutineScope(Dispatchers.Default).launch {
+            flow
+//                .onEach {
+//                    Log.i("onEach", it)
+//                }
+                .reduce { old, new ->
+                    Log.w("old", old)
+                    Log.w("new", new)
+                    val added = new - old
+                    val deleted = old - new
+                    Log.w("add", added)
+                    Log.w("delete", deleted)
+                    new
+                }
+        }
+    }
+
+    suspend fun emitTest() {
+        _flow.emit(setOf(1, 2, 3))
+        Log.w("emit(setOf(1, 2, 3))")
+        _flow.emit(setOf(4, 2, 3))
+        Log.w("emit(setOf(4, 2, 3))")
+    }
+}
+
+class StateFlowTester {
+    val _flow = MutableStateFlow<Set<Int>>(emptySet())
+    val flow = _flow.asStateFlow()
+
+    fun reduce() {
+        CoroutineScope(Dispatchers.Default).launch {
+            flow.onEach {
+                Log.i("onEach", it)
+            }.reduce { old, new ->
+                Log.w("old", old)
+                Log.w("new", new)
+                val added = new - old
+                val deleted = old - new
+                Log.w("add", added)
+                Log.w("delete", deleted)
+                new
+            }
+        }
+    }
+
+    suspend fun emitTest() {
+
+        _flow.emit(setOf(1, 2, 3))
+        Log.w("emit(setOf(1, 2, 3))")
+//        delay(1000)
+        _flow.emit(setOf(4, 2, 3))
+        Log.w("emit(setOf(4, 2, 3))")
+        reduce()
+        _flow.emit(setOf(1, 2, 3))
+        _flow.emit(setOf(1, 2, 3))
+        _flow.emit(setOf(1, 2, 3))
+        _flow.emit(setOf(1, 2, 3))
     }
 }
