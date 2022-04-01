@@ -42,6 +42,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
+import java.io.StringWriter
 import java.lang.reflect.Method
 import java.nio.charset.Charset
 import java.text.SimpleDateFormat
@@ -50,6 +51,11 @@ import java.util.Date
 import java.util.Locale
 import java.util.StringTokenizer
 import java.util.concurrent.TimeUnit
+import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.transform.OutputKeys
+import javax.xml.transform.TransformerFactory
+import javax.xml.transform.dom.DOMSource
+import javax.xml.transform.stream.StreamResult
 import kotlin.experimental.and
 import kotlin.experimental.inv
 
@@ -61,31 +67,73 @@ object Log {
     const val WARN = android.util.Log.WARN
     const val ERROR = android.util.Log.ERROR
     const val ASSERT = android.util.Log.ASSERT
+    private const val LF = "\n"
+
+    @JvmField
     var LOG = true
+
+    @JvmField
     var FILE_LOG: File? = null
 
-    private const val PREFIX = "``"
-    private const val PREFIX_MULTILINE = "$PREFIX▼"
-    private const val LF = "\n"
-    private const val TAG_LONGTH = 50
-    private const val MAX_LOG_LINE_BYTE_SIZE = 3600
+    @JvmField
+    var START = android.util.Log.DEBUG
 
-    private var defaultLogFilterClassNameRegex: Regex = "^android\\..+|^com\\.android\\..+|^java\\..+".toRegex()
+    @JvmField
+    var LIFECYCLE_CREATE = android.util.Log.DEBUG
+
+    @JvmField
+    var LIFECYCLE_DESTROYED = android.util.Log.DEBUG
+
+    @JvmField
+    var PREFIX = "``"
+
+    @JvmField
+    var PREFIX_MULTILINE: String = "$PREFIX▼"
+
+    @JvmField
+    var TAG_LENGTH = 70
+
+    @JvmField
+    var MAX_LOG_LINE_BYTE_SIZE = 3600
+
+    @JvmField
+    var defaultLogFilterClassNameRegex: Regex = "^android\\..+|^com\\.android\\..+|^java\\..+".toRegex()
+
+    @JvmField
     var logFilterClassNameRegex: Regex = "".toRegex()
+
+    @JvmField
     var logFilterPredicate: (StackTraceElement) -> Boolean = { false }
 
-
+    @JvmStatic
     fun getTag(stack: StackTraceElement = getStack()): String {
         val className = getClzMethod(stack)
         val locator = getLocator(stack)
         return (className + locator).takeLastSafe()
     }
 
-    private fun getLocator(info: StackTraceElement) = ".(%s:%d)".format(info.fileName, info.lineNumber)
+    @JvmStatic
+    fun getLocator(info: StackTraceElement) = ".(%s:%d)".format(info.fileName, info.lineNumber)
 
-    private fun getClzMethod(info: StackTraceElement): String = runCatching {
+    @JvmStatic
+    fun getClzMethod(info: StackTraceElement): String = runCatching {
         info.className.takeLastWhile { it != '.' } + "::" + info.methodName
     }.getOrDefault(info.className)
+
+    @JvmStatic
+    fun getStackFilter(filterClassNameRegex: String? = null): StackTraceElement {
+        return Exception().stackTrace.filterNot {
+            it.className == javaClass.name
+        }.run {
+            asSequence().filterNot {
+                it.className.matches(defaultLogFilterClassNameRegex)
+            }.filterNot { stackTraceElement ->
+                filterClassNameRegex?.let { stackTraceElement.className.matches(filterClassNameRegex.toRegex()) } ?: false
+            }.filterNot {
+                it.lineNumber < 0
+            }.firstOrNull() ?: first()
+        }
+    }
 
     private fun getStack(): StackTraceElement {
         return Exception().stackTrace.filterNot {
@@ -132,7 +180,7 @@ object Log {
     fun pt(priority: Int, tag: String, vararg args: Any?): Int {
         if (!LOG) return 0
         val msg = getMessage(*args)
-        return printlnInternal(priority, tag, msg)
+        return printlnInternal(priority, tag.takeLastSafe(), msg)
     }
 
     @JvmStatic
@@ -182,8 +230,8 @@ object Log {
                     0 -> android.util.Log.println(priority, tag, PREFIX)
                     1 -> android.util.Log.println(priority, tag, PREFIX + this[0])
                     else -> {
-                        android.util.Log.println(priority, tag, PREFIX_MULTILINE)
-                        map { android.util.Log.println(priority, tag, PREFIX + it) }.sum()
+                        if (PREFIX_MULTILINE.isNotBlank()) android.util.Log.println(priority, tag, PREFIX_MULTILINE)
+                        sumOf { android.util.Log.println(priority, tag, PREFIX + it) }
                     }
                 }
             }
@@ -282,7 +330,7 @@ object Log {
         when (text.first() to text.last()) {
             '[' to ']' -> JSONArray(text).toString(2)
             '{' to '}' -> JSONObject(text).toString(2)
-            '<' to '>' -> PrettyXml.format(text)
+            '<' to '>' -> prettyXml(text)
             else -> text
         }
     }.getOrDefault(text)
@@ -453,7 +501,7 @@ object Log {
         context.contentResolver.query(uri, null, null, null, null).use { cursor(it) }
     }
 
-    var SEED_S = 0L
+    private var SEED_S = 0L
 
     @JvmStatic
     fun tic(vararg args: Any? = arrayOf("")) {
@@ -579,91 +627,21 @@ object Log {
     }
 
     //xml
-    private object PrettyXml {
-        private val formatter = XmlFormatter(2, 80)
-        fun format(s: String): String {
-            return formatter.format(s, 0)
+    @JvmStatic
+    fun prettyXml(xml: String): String {
+        val doc = DocumentBuilderFactory.newInstance().run {
+            isValidating = false
+            newDocumentBuilder().parse(xml.byteInputStream())
         }
+        val source = DOMSource(doc)
+        val result = StreamResult(StringWriter())
 
-        private fun buildWhitespace(numChars: Int): String {
-            val sb = StringBuilder()
-            for (i in 0 until numChars) sb.append(" ")
-            return sb.toString()
+        TransformerFactory.newInstance().newTransformer().apply {
+            setOutputProperty(OutputKeys.INDENT, "yes")
+            setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2")
+            transform(source, result)
         }
-
-        private fun lineWrap(s: String?, lineLength: Int, indent: Int): String? {
-            if (s == null) return null
-            val sb = StringBuilder()
-            var lineStartPos = 0
-            var lineEndPos: Int
-            var firstLine = true
-            while (lineStartPos < s.length) {
-                if (!firstLine) sb.append("\n") else firstLine = false
-                if (lineStartPos + lineLength > s.length) lineEndPos = s.length - 1 else {
-                    lineEndPos = lineStartPos + lineLength - 1
-                    while (lineEndPos > lineStartPos && s[lineEndPos] != ' ' && s[lineEndPos] != '\t') lineEndPos--
-                }
-                sb.append(buildWhitespace(indent))
-                sb.append(s.substring(lineStartPos, lineEndPos + 1))
-                lineStartPos = lineEndPos + 1
-            }
-            return sb.toString()
-        }
-
-        private class XmlFormatter(private val indentNumChars: Int, private val lineLength: Int) {
-            private var singleLine = false
-
-            @Synchronized
-            fun format(s: String, initialIndent: Int): String {
-                var indent = initialIndent
-                val sb = StringBuilder()
-                var i = 0
-                while (i < s.length) {
-                    val currentChar = s[i]
-                    if (currentChar == '<') {
-                        val nextChar = s[i + 1]
-                        if (nextChar == '/') indent -= indentNumChars
-                        if (!singleLine) // Don't indent before closing element if we're creating opening and closing elements on a single line.
-                            sb.append(buildWhitespace(indent))
-                        if (nextChar != '?' && nextChar != '!' && nextChar != '/') indent += indentNumChars
-                        singleLine = false // Reset flag.
-                    }
-                    sb.append(currentChar)
-                    if (currentChar == '>') {
-                        if (s[i - 1] == '/') {
-                            indent -= indentNumChars
-                            sb.append("\n")
-                        } else {
-                            val nextStartElementPos = s.indexOf('<', i)
-                            if (nextStartElementPos > i + 1) {
-                                val textBetweenElements = s.substring(i + 1, nextStartElementPos)
-                                // If the space between elements is solely newlines, let them through to preserve additional newlines in source document.
-                                when {
-                                    textBetweenElements.replace("\n".toRegex(), "").isEmpty() -> sb.append(
-                                        textBetweenElements + "\n"
-                                    )
-                                    textBetweenElements.length <= lineLength * 0.5 -> sb.append(textBetweenElements)
-                                        .also { singleLine = true }
-                                    else -> sb.append(
-                                        "\n" + lineWrap(
-                                            textBetweenElements,
-                                            lineLength,
-                                            indent
-                                        ) + "\n"
-                                    )
-                                }
-                                i = nextStartElementPos - 1
-                            } else {
-                                sb.append("\n")
-                            }
-                        }
-                    }
-                    i++
-                }
-                return sb.toString()
-            }
-
-        }
+        return result.writer.toString()
     }
 
     class TraceLog : Throwable()
@@ -686,7 +664,7 @@ object Log {
             kotlin.io.println(tag + sa[0])
             return
         }
-        kotlin.io.println(tag + PREFIX_MULTILINE)
+        if (PREFIX_MULTILINE.isNotBlank()) kotlin.io.println(tag + PREFIX_MULTILINE)
         sa.forEach {
             kotlin.io.println(tag + it)
         }
@@ -695,7 +673,7 @@ object Log {
 
     //etc
     private val String.width get() = toByteArray(Charset.forName("euc-kr")).size
-    fun String.takeLastSafe(length: Int = TAG_LONGTH): String {
+    fun String.takeLastSafe(length: Int = TAG_LENGTH): String {
         var text = takeLast(length)
         while (text.width != length) {
             text = if (text.width > length)
@@ -723,8 +701,6 @@ object Log {
         return tokens
     }
 
-    //0xc0 : 1100 0000
-    //0x80 : 1000 0000
     fun ByteArray.takeSafe(lengthByte: Int, startOffset: Int): String {
         if (size <= startOffset)
             return ""
@@ -807,7 +783,7 @@ object Log {
     @JvmStatic
     fun printStackTrace() {
         if (!LOG) return
-        Log.TraceLog().printStackTrace()
+        TraceLog().printStackTrace()
     }
 
     @JvmStatic

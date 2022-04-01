@@ -1,3 +1,4 @@
+import android.log.Log
 import android.log.Log.splitSafe
 import android.log.Log.takeLastSafe
 import android.log.Log.takeSafe
