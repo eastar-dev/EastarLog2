@@ -72,6 +72,16 @@ object Log {
     @JvmField
     var LOG = true
 
+
+    enum class TagMode {
+        CLZ_FUNC_LOCATOR, FUNC, LOCATOR
+    }
+
+    @JvmField
+    var TAG: TagMode = TagMode.LOCATOR
+
+    var MSG_LOCATOR = false
+
     @JvmField
     var FILE_LOG: File? = null
 
@@ -106,18 +116,32 @@ object Log {
     var logFilterPredicate: (StackTraceElement) -> Boolean = { false }
 
     @JvmStatic
-    fun getTag(stack: StackTraceElement = getStack()): String {
-        val className = getClzMethod(stack)
-        val locator = getLocator(stack)
-        return (className + locator).takeLastSafe()
+    fun getTag(stack: StackTraceElement = getStack()): String = when (TAG) {
+        TagMode.FUNC ->
+            getMethodName(stack).takeLast(35)
+
+        TagMode.LOCATOR ->
+            getLocator2(stack).takeLast(35)
+
+        TagMode.CLZ_FUNC_LOCATOR ->
+            (getClzMethod(stack) + getLocator(stack)).takeLastSafe()
     }
 
     @JvmStatic
     fun getLocator(info: StackTraceElement) = ".(%s:%d)".format(info.fileName, info.lineNumber)
 
     @JvmStatic
+    fun getLocator2(info: StackTraceElement) = "(%s:%d)".format(info.fileName, info.lineNumber)
+
+    @JvmStatic
+    fun getMethodName(info: StackTraceElement): String = runCatching { info.methodName }.getOrDefault("?")
+
+    @JvmStatic
+    fun getClzName(info: StackTraceElement): String = runCatching { info.className.takeLastWhile { it != '.' } }.getOrDefault(info.className)
+
+    @JvmStatic
     fun getClzMethod(info: StackTraceElement): String = runCatching {
-        info.className.takeLastWhile { it != '.' } + "::" + info.methodName
+        getClzName(info) + "::" + getMethodName(info)
     }.getOrDefault(info.className)
 
     @JvmStatic
@@ -173,22 +197,22 @@ object Log {
         val info = getStack()
         val tag = getTag(info)
         val msg = getMessage(*args)
-        return printlnInternal(priority, tag, msg)
+        return printlnInternal(priority, tag, msg, info)
     }
 
     @JvmStatic
     fun pt(priority: Int, tag: String, vararg args: Any?): Int {
         if (!LOG) return 0
         val msg = getMessage(*args)
-        return printlnInternal(priority, tag.takeLastSafe(), msg)
+        return printlnInternal(priority, tag.takeLastSafe(), msg, getStack())
     }
 
     @JvmStatic
     fun ps(priority: Int, info: StackTraceElement, vararg args: Any?): Int {
         if (!LOG) return 0
         val tag = getTag(info)
-        val msg = getMessage(*args)
-        return printlnInternal(priority, tag, msg)
+        val msg = getMessage(*args, info)
+        return printlnInternal(priority, tag, msg, info)
     }
 
     @JvmStatic
@@ -197,7 +221,7 @@ object Log {
         val info = Exception().stackTrace[1 + depth]
         val tag = getTag(info)
         val msg = getMessage(*args)
-        return printlnInternal(priority, tag, msg)
+        return printlnInternal(priority, tag, msg, info)
     }
 
     @JvmStatic
@@ -206,7 +230,7 @@ object Log {
         val info = getStackCaller(method)
         val tag = getTag(info)
         val msg = getMessage(*args)
-        return printlnInternal(priority, tag, msg)
+        return printlnInternal(priority, tag, msg, info)
     }
 
     @JvmStatic
@@ -215,22 +239,23 @@ object Log {
         val info = getStackMethod(method)
         val tag = getTag(info)
         val msg = getMessage(*args)
-        return printlnInternal(priority, tag, msg)
+        return printlnInternal(priority, tag, msg, info)
     }
 
-    private fun printlnInternal(priority: Int, tag: String?, msg: String?): Int {
+    private fun printlnInternal(priority: Int, tag: String?, msg: String?, info: StackTraceElement): Int {
         flog(msg)
+        val locator = if (MSG_LOCATOR) getLocator2(info) else ""
 
-        msg ?: return android.util.Log.println(priority, tag, PREFIX)
+        msg ?: return android.util.Log.println(priority, tag, PREFIX + locator)
 
         return msg.split(LF)
             .flatMap { it.splitSafe(MAX_LOG_LINE_BYTE_SIZE) }
             .run {
                 when (size) {
-                    0 -> android.util.Log.println(priority, tag, PREFIX)
-                    1 -> android.util.Log.println(priority, tag, PREFIX + this[0])
+                    0 -> android.util.Log.println(priority, tag, PREFIX + locator)
+                    1 -> android.util.Log.println(priority, tag, PREFIX + this[0] + locator)
                     else -> {
-                        if (PREFIX_MULTILINE.isNotBlank()) android.util.Log.println(priority, tag, PREFIX_MULTILINE)
+                        if (PREFIX_MULTILINE.isNotBlank()) android.util.Log.println(priority, tag, PREFIX_MULTILINE + locator)
                         sumOf { android.util.Log.println(priority, tag, PREFIX + it) }
                     }
                 }
@@ -669,7 +694,6 @@ object Log {
             kotlin.io.println(tag + it)
         }
     }
-
 
     //etc
     private val String.width get() = toByteArray(Charset.forName("euc-kr")).size

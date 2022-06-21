@@ -20,6 +20,10 @@ class MainActivity : LogActivity() {
                 setOnClickListener { startActivityForResult(Intent(context, BActivity::class.java), 1) }
             }.also { addView(it) }
             Button(context).apply {
+                text = "Log Test"
+                setOnClickListener { logTest() }
+            }.also { addView(it) }
+            Button(context).apply {
                 text = "Legacy log test"
                 setOnClickListener { Logger.e("%s %d", "test", 200) }
             }.also { addView(it) }
@@ -46,8 +50,6 @@ class MainActivity : LogActivity() {
         })
 
         logTest()
-
-        getMaxLogLength_when_tag1Byte()
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -56,6 +58,8 @@ class MainActivity : LogActivity() {
 
 
     private fun logTest() {
+        getMaxLogLength_when_tag1Byte()
+
         testMethod()
         한글함수()
         이것은_한글_함수_테스트_입니다()
@@ -70,6 +74,8 @@ class MainActivity : LogActivity() {
         length12345678()
         length123456789()
         length1234567890()
+
+        Exception().printStackTrace()
     }
 
     private fun testMethod() {

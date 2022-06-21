@@ -46,6 +46,15 @@ object Log {
     @JvmField
     var LOG = false
 
+    enum class TagMode {
+        CLZ_FUNC_LOCATOR, FUNC, LOCATOR
+    }
+
+    @JvmField
+    var TAG: TagMode = TagMode.LOCATOR
+
+    var MSG_LOCATOR = false
+
     @JvmField
     var FILE_LOG: File? = null
 
