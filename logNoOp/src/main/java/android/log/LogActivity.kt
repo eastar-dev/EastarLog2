@@ -1,3 +1,12 @@
 package android.log
 
-abstract class LogActivity : androidx.appcompat.app.AppCompatActivity()
+import androidx.annotation.ContentView
+import androidx.appcompat.app.AppCompatActivity
+
+abstract class LogActivity : AppCompatActivity {
+
+    constructor() : super()
+
+    @ContentView
+    constructor(contentLayoutId: Int) : super(contentLayoutId)
+}

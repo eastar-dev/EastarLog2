@@ -72,16 +72,6 @@ object Log {
     @JvmField
     var LOG = true
 
-
-    enum class TagMode {
-        CLZ_FUNC_LOCATOR, FUNC, LOCATOR
-    }
-
-    @JvmField
-    var TAG: TagMode = TagMode.LOCATOR
-
-    var MSG_LOCATOR = false
-
     @JvmField
     var FILE_LOG: File? = null
 
@@ -104,6 +94,9 @@ object Log {
     var TAG_LENGTH = 70
 
     @JvmField
+    var LOCATOR_WIDTH = 40
+
+    @JvmField
     var MAX_LOG_LINE_BYTE_SIZE = 3600
 
     @JvmField
@@ -116,22 +109,10 @@ object Log {
     var logFilterPredicate: (StackTraceElement) -> Boolean = { false }
 
     @JvmStatic
-    fun getTag(stack: StackTraceElement = getStack()): String = when (TAG) {
-        TagMode.FUNC ->
-            getMethodName(stack).takeLast(35)
-
-        TagMode.LOCATOR ->
-            getLocator2(stack).takeLast(35)
-
-        TagMode.CLZ_FUNC_LOCATOR ->
-            (getClzMethod(stack) + getLocator(stack)).takeLastSafe()
-    }
+    fun getTag(stack: StackTraceElement = getStack()): String = getMethodName(stack).take(35)
 
     @JvmStatic
-    fun getLocator(info: StackTraceElement) = ".(%s:%d)".format(info.fileName, info.lineNumber)
-
-    @JvmStatic
-    fun getLocator2(info: StackTraceElement) = "(%s:%d)".format(info.fileName, info.lineNumber)
+    fun getLocator(info: StackTraceElement) = "(%s:%d)".format(info.fileName, info.lineNumber)
 
     @JvmStatic
     fun getMethodName(info: StackTraceElement): String = runCatching { info.methodName }.getOrDefault("?")
@@ -192,27 +173,30 @@ object Log {
     }
 
     @JvmStatic
+    fun pt(priority: Int, tag: String, locator: String, vararg args: Any?): Int {
+        if (!LOG) return 0
+        val locatorWithPadding = locator.takeWidthSafe(LOCATOR_WIDTH)
+        val msg = getMessage(*args)
+        return printlnInternal(priority, tag, msg, locatorWithPadding)
+    }
+
+    @JvmStatic
     fun p(priority: Int, vararg args: Any?): Int {
         if (!LOG) return 0
         val info = getStack()
         val tag = getTag(info)
+        val locatorWithPadding = getLocator(info).takeWidthSafe(LOCATOR_WIDTH)
         val msg = getMessage(*args)
-        return printlnInternal(priority, tag, msg, info)
-    }
-
-    @JvmStatic
-    fun pt(priority: Int, tag: String, vararg args: Any?): Int {
-        if (!LOG) return 0
-        val msg = getMessage(*args)
-        return printlnInternal(priority, tag.takeLastSafe(), msg, getStack())
+        return printlnInternal(priority, tag, msg, locatorWithPadding)
     }
 
     @JvmStatic
     fun ps(priority: Int, info: StackTraceElement, vararg args: Any?): Int {
         if (!LOG) return 0
         val tag = getTag(info)
+        val locatorWithPadding = getLocator(info).takeWidthSafe(LOCATOR_WIDTH)
         val msg = getMessage(*args, info)
-        return printlnInternal(priority, tag, msg, info)
+        return printlnInternal(priority, tag, msg, locatorWithPadding)
     }
 
     @JvmStatic
@@ -220,8 +204,9 @@ object Log {
         if (!LOG) return 0
         val info = Exception().stackTrace[1 + depth]
         val tag = getTag(info)
+        val locatorWithPadding = getLocator(info).takeWidthSafe(LOCATOR_WIDTH)
         val msg = getMessage(*args)
-        return printlnInternal(priority, tag, msg, info)
+        return printlnInternal(priority, tag, msg, locatorWithPadding)
     }
 
     @JvmStatic
@@ -229,8 +214,9 @@ object Log {
         if (!LOG) return 0
         val info = getStackCaller(method)
         val tag = getTag(info)
+        val locatorWithPadding = getLocator(info).takeWidthSafe(LOCATOR_WIDTH)
         val msg = getMessage(*args)
-        return printlnInternal(priority, tag, msg, info)
+        return printlnInternal(priority, tag, msg, locatorWithPadding)
     }
 
     @JvmStatic
@@ -238,24 +224,24 @@ object Log {
         if (!LOG) return 0
         val info = getStackMethod(method)
         val tag = getTag(info)
+        val locatorWithPadding = getLocator(info).takeWidthSafe(LOCATOR_WIDTH)
         val msg = getMessage(*args)
-        return printlnInternal(priority, tag, msg, info)
+        return printlnInternal(priority, tag, msg, locatorWithPadding)
     }
 
-    private fun printlnInternal(priority: Int, tag: String?, msg: String?, info: StackTraceElement): Int {
+    private fun printlnInternal(priority: Int, tag: String?, msg: String?, locatorWithPadding: String = "".padEnd(LOCATOR_WIDTH, '.')): Int {
         flog(msg)
-        val locator = if (MSG_LOCATOR) getLocator2(info) else ""
 
-        msg ?: return android.util.Log.println(priority, tag, PREFIX + locator)
+        msg ?: return android.util.Log.println(priority, tag, locatorWithPadding + PREFIX)
 
         return msg.split(LF)
             .flatMap { it.splitSafe(MAX_LOG_LINE_BYTE_SIZE) }
             .run {
                 when (size) {
-                    0 -> android.util.Log.println(priority, tag, PREFIX + locator)
-                    1 -> android.util.Log.println(priority, tag, PREFIX + this[0] + locator)
+                    0 -> android.util.Log.println(priority, tag, locatorWithPadding + PREFIX)
+                    1 -> android.util.Log.println(priority, tag, locatorWithPadding + PREFIX + this[0])
                     else -> {
-                        if (PREFIX_MULTILINE.isNotBlank()) android.util.Log.println(priority, tag, PREFIX_MULTILINE + locator)
+                        if (PREFIX_MULTILINE.isNotBlank()) android.util.Log.println(priority, tag, locatorWithPadding + PREFIX_MULTILINE)
                         sumOf { android.util.Log.println(priority, tag, PREFIX + it) }
                     }
                 }
@@ -326,7 +312,7 @@ object Log {
 
     /** dump */
     private fun getMessage(vararg args: Any?): String {
-        if (args.isNullOrEmpty())
+        if (args.isEmpty())
             return ""
 
         return args.joinToString {
@@ -697,13 +683,24 @@ object Log {
 
     //etc
     private val String.width get() = toByteArray(Charset.forName("euc-kr")).size
-    fun String.takeLastSafe(length: Int = TAG_LENGTH): String {
+    fun String.takeWidthLastSafe(length: Int = TAG_LENGTH): String {
         var text = takeLast(length)
         while (text.width != length) {
             text = if (text.width > length)
                 text.drop(1)
             else
                 text.padStart(length - text.width + text.length, '.')
+        }
+        return text
+    }
+
+    fun String.takeWidthSafe(length: Int = TAG_LENGTH): String {
+        var text = take(length)
+        while (text.width != length) {
+            text = if (text.width > length)
+                text.dropLast(1)
+            else
+                text.padEnd(length - text.width + text.length, '.')
         }
         return text
     }

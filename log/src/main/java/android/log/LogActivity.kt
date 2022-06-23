@@ -3,8 +3,10 @@ package android.log
 import android.app.Activity
 import android.content.ComponentName
 import android.content.Intent
+import android.content.ServiceConnection
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
+import java.util.concurrent.Executor
 
 abstract class LogActivity : AppCompatActivity {
 
@@ -14,6 +16,21 @@ abstract class LogActivity : AppCompatActivity {
     override fun startService(service: Intent): ComponentName? {
         Log.pc(Log.START, "startService", "▶▶", javaClass, service.component?.shortClassName ?: service.toUri(0), service)
         return super.startService(service)
+    }
+
+    override fun bindService(service: Intent?, conn: ServiceConnection, flags: Int): Boolean {
+        Log.pc(Log.START, "bindService", "▶▶", javaClass, service?.component?.shortClassName ?: service?.toUri(0), service)
+        return super.bindService(service, conn, flags)
+    }
+
+    override fun bindService(service: Intent, flags: Int, executor: Executor, conn: ServiceConnection): Boolean {
+        Log.pc(Log.START, "bindService", "▶▶", javaClass, service.component?.shortClassName ?: service.toUri(0), service)
+        return super.bindService(service, flags, executor, conn)
+    }
+
+    override fun unbindService(conn: ServiceConnection) {
+        Log.pc(Log.START, "unbindService", "▶▶", javaClass, conn)
+        super.unbindService(conn)
     }
 
     override fun sendBroadcast(intent: Intent) {

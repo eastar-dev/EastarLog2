@@ -1,6 +1,5 @@
-import android.log.Log
 import android.log.Log.splitSafe
-import android.log.Log.takeLastSafe
+import android.log.Log.takeWidthLastSafe
 import android.log.Log.takeSafe
 import org.junit.Ignore
 import org.junit.Test
@@ -131,7 +130,7 @@ class AndroidLogcatTest {
         android.util.Log.e("1234567890".repeat(8) + "1234", "~")
         repeat(3) {
             val tag = "가1나23다라456마바사789".repeat(it + 1)
-            android.util.Log.e(tag.takeLastSafe(50), "~")
+            android.util.Log.e(tag.takeWidthLastSafe(50), "~")
         }
     }
 
@@ -142,11 +141,11 @@ class AndroidLogcatTest {
         android.util.Log.e("~".padStart(5), "1234567890".repeat(8))
         repeat(10) {
             val tag = "가1나23다라456마바사789"
-            android.util.Log.e("~$it".padStart(5), tag.takeLastSafe(it))
+            android.util.Log.e("~$it".padStart(5), tag.takeWidthLastSafe(it))
         }
         repeat(10) {
             val tag = "가1나23다라456마바사789"
-            android.util.Log.e("~$it".padStart(5), tag.takeLastSafe(it + 15))
+            android.util.Log.e("~$it".padStart(5), tag.takeWidthLastSafe(it + 15))
         }
     }
 

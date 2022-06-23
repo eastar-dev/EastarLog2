@@ -4,7 +4,6 @@ package android.log
 
 import android.app.Activity
 import android.app.Application
-import android.log.Log.takeLastSafe
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
@@ -14,12 +13,12 @@ fun Application.logLifeCycle() = registerActivityLifecycleCallbacks(object : App
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
         logFragment(activity)
         val ext = if (activity.javaClass.getAnnotation(Metadata::class.java) == null) "java" else "kt"
-        activity.javaClass.simpleName.let { Log.pt(Log.LIFECYCLE_CREATE, "onActivityCreated.($it.$ext:0)".takeLastSafe(), it) }
+        activity.javaClass.simpleName.let { Log.pt(Log.LIFECYCLE_CREATE, "onActivityCreated", "($it.$ext:0)", it) }
     }
 
     override fun onActivityDestroyed(activity: Activity) {
         val ext = if (activity.javaClass.getAnnotation(Metadata::class.java) == null) "java" else "kt"
-        activity.javaClass.simpleName.let { Log.pt(Log.LIFECYCLE_DESTROYED, "onActivityDestroyed.($it.$ext:0)".takeLastSafe(), it) }
+        activity.javaClass.simpleName.let { Log.pt(Log.LIFECYCLE_DESTROYED, "onActivityDestroyed", "($it.$ext:0)", it) }
     }
 
     override fun onActivityStarted(activity: Activity) {}
@@ -38,7 +37,7 @@ private fun logFragment(activity: Activity) {
                     f.javaClass.simpleName.takeUnless {
                         "SupportRequestManagerFragment" == it
                     }?.let {
-                        Log.pt(Log.LIFECYCLE_CREATE, "onFragmentCreated.($it.$ext:0)".takeLastSafe(), it)
+                        Log.pt(Log.LIFECYCLE_CREATE, "onFragmentCreated", "($it.$ext:0)", it)
                     }
                 }
 
@@ -47,7 +46,7 @@ private fun logFragment(activity: Activity) {
                     f.javaClass.simpleName.takeUnless {
                         "SupportRequestManagerFragment" == it
                     }?.let {
-                        Log.pt(Log.LIFECYCLE_DESTROYED, "onFragmentDestroyed.($it.$ext:0)".takeLastSafe(), it)
+                        Log.pt(Log.LIFECYCLE_DESTROYED, "onFragmentDestroyed", "($it.$ext:0)", it)
                     }
                 }
             }, true
