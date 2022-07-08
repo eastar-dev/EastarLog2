@@ -5,12 +5,16 @@ import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
 import android.os.Bundle
+import androidx.annotation.CallSuper
+import androidx.annotation.ContentView
 import androidx.appcompat.app.AppCompatActivity
 import java.util.concurrent.Executor
 
 abstract class LogActivity : AppCompatActivity {
 
     constructor() : super()
+
+    @ContentView
     constructor(contentLayoutId: Int) : super(contentLayoutId)
 
     override fun startService(service: Intent): ComponentName? {
@@ -44,11 +48,19 @@ abstract class LogActivity : AppCompatActivity {
     }
 
     override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
-        Log.pc(Log.START, if (requestCode == -1) "startActivity" else "startActivityForResult", "▶▶", javaClass, intent.component?.shortClassName ?: intent.toUri(0), intent, "0x%08X".format(requestCode))
+        Log.pc(
+            Log.START,
+            if (requestCode == -1) "startActivity" else "startActivityForResult",
+            "▶▶",
+            javaClass,
+            intent.component?.shortClassName ?: intent.toUri(0),
+            intent,
+            "0x%08X".format(requestCode)
+        )
         super.startActivityForResult(intent, requestCode, options)
     }
 
-
+    @CallSuper
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (requestCode shr 16 == 0)
             onActivityResultLog(javaClass, requestCode, resultCode, data)
@@ -58,14 +70,16 @@ abstract class LogActivity : AppCompatActivity {
     companion object {
         internal fun onActivityResultLog(clz: Class<*>, requestCode: Int, resultCode: Int, data: Intent?) {
             val level = if (resultCode == Activity.RESULT_OK) Log.INFO else Log.WARN
-            Log.pm(level, "onActivityResult", "◀◀",
+            Log.pm(
+                level, "onActivityResult", "◀◀",
                 clz,
                 "requestCode=0x%08x".format(requestCode),
                 when (resultCode) {
                     Activity.RESULT_OK -> "Activity.RESULT_OK"
                     Activity.RESULT_CANCELED -> "Activity.RESULT_CANCELED"
                     else -> ""
-                })
+                }
+            )
             if (data != null && data.extras != null)
                 Log.p(level, data.extras)
 

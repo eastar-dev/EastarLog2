@@ -44,7 +44,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.StringWriter
 import java.lang.reflect.Method
-import java.nio.charset.Charset
 import java.text.SimpleDateFormat
 import java.util.Arrays
 import java.util.Date
@@ -56,8 +55,6 @@ import javax.xml.transform.OutputKeys
 import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
-import kotlin.experimental.and
-import kotlin.experimental.inv
 
 /** @author eastar*/
 object Log {
@@ -91,7 +88,7 @@ object Log {
     var PREFIX_MULTILINE: String = "$PREFIX▼"
 
     @JvmField
-    var TAG_LENGTH = 70
+    var TAG_WIDTH = 35
 
     @JvmField
     var LOCATOR_WIDTH = 40
@@ -109,24 +106,25 @@ object Log {
     var logFilterPredicate: (StackTraceElement) -> Boolean = { false }
 
     @JvmStatic
-    fun getTag(stack: StackTraceElement = getStack()): String = getMethodName(stack).take(35)
+    fun getLocator(stack: StackTraceElement): String = "(%s:%d)".format(stack.fileName, stack.lineNumber)
 
     @JvmStatic
-    fun getLocator(info: StackTraceElement) = "(%s:%d)".format(info.fileName, info.lineNumber)
+    fun getLocatorWidth(stack: StackTraceElement, width: Int = LOCATOR_WIDTH): String = getLocator(stack).takePadEndSafeWidth(width)
 
     @JvmStatic
-    fun getMethodName(info: StackTraceElement): String = runCatching { info.methodName }.getOrDefault("?")
+    fun getMethodName(stack: StackTraceElement): String = runCatching { stack.methodName }.getOrDefault("?")
 
     @JvmStatic
-    fun getClzName(info: StackTraceElement): String = runCatching { info.className.takeLastWhile { it != '.' } }.getOrDefault(info.className)
+    fun getMethodNameWidth(stack: StackTraceElement, width: Int = TAG_WIDTH): String = getMethodName(stack).takePadEndSafeWidth(width)
 
     @JvmStatic
-    fun getClzMethod(info: StackTraceElement): String = runCatching {
-        getClzName(info) + "::" + getMethodName(info)
-    }.getOrDefault(info.className)
+    fun getClzName(stack: StackTraceElement): String = runCatching { stack.className.takeLastWhile { it != '.' } }.getOrDefault(stack.className)
 
     @JvmStatic
-    fun getStackFilter(filterClassNameRegex: String? = null): StackTraceElement {
+    fun getClzMethod(stack: StackTraceElement): String = runCatching { getClzName(stack) + "::" + getMethodName(stack) }.getOrDefault(stack.className)
+
+    @JvmStatic
+    private fun getStackFilter(filterClassNameRegex: String? = null): StackTraceElement {
         return Exception().stackTrace.filterNot {
             it.className == javaClass.name
         }.run {
@@ -172,76 +170,71 @@ object Log {
         }
     }
 
-    @JvmStatic
-    fun pt(priority: Int, tag: String, locator: String, vararg args: Any?): Int {
-        if (!LOG) return 0
-        val locatorWithPadding = locator.takeWidthSafe(LOCATOR_WIDTH)
-        val msg = getMessage(*args)
-        return printlnInternal(priority, tag, msg, locatorWithPadding)
-    }
 
     @JvmStatic
-    fun p(priority: Int, vararg args: Any?): Int {
+    fun pm(priority: Int, method: String, vararg args: Any?): Int {
         if (!LOG) return 0
-        val info = getStack()
-        val tag = getTag(info)
-        val locatorWithPadding = getLocator(info).takeWidthSafe(LOCATOR_WIDTH)
-        val msg = getMessage(*args)
-        return printlnInternal(priority, tag, msg, locatorWithPadding)
-    }
-
-    @JvmStatic
-    fun ps(priority: Int, info: StackTraceElement, vararg args: Any?): Int {
-        if (!LOG) return 0
-        val tag = getTag(info)
-        val locatorWithPadding = getLocator(info).takeWidthSafe(LOCATOR_WIDTH)
-        val msg = getMessage(*args, info)
-        return printlnInternal(priority, tag, msg, locatorWithPadding)
-    }
-
-    @JvmStatic
-    fun pn(priority: Int, depth: Int, vararg args: Any?): Int {
-        if (!LOG) return 0
-        val info = Exception().stackTrace[1 + depth]
-        val tag = getTag(info)
-        val locatorWithPadding = getLocator(info).takeWidthSafe(LOCATOR_WIDTH)
-        val msg = getMessage(*args)
-        return printlnInternal(priority, tag, msg, locatorWithPadding)
+        val stack = getStackMethod(method)
+        return ps(priority, stack, *args)
     }
 
     @JvmStatic
     fun pc(priority: Int, method: String, vararg args: Any?): Int {
         if (!LOG) return 0
-        val info = getStackCaller(method)
-        val tag = getTag(info)
-        val locatorWithPadding = getLocator(info).takeWidthSafe(LOCATOR_WIDTH)
-        val msg = getMessage(*args)
-        return printlnInternal(priority, tag, msg, locatorWithPadding)
+        val stack = getStackCaller(method)
+        return ps(priority, stack, *args)
     }
 
     @JvmStatic
-    fun pm(priority: Int, method: String, vararg args: Any?): Int {
+    fun pl(priority: Int, tag: String, locator: String, vararg args: Any?): Int {
         if (!LOG) return 0
-        val info = getStackMethod(method)
-        val tag = getTag(info)
-        val locatorWithPadding = getLocator(info).takeWidthSafe(LOCATOR_WIDTH)
         val msg = getMessage(*args)
-        return printlnInternal(priority, tag, msg, locatorWithPadding)
+        return printlnInternal(priority, tag.takePadEndSafeWidth(TAG_WIDTH), msg, locator.takePadEndSafeWidth(LOCATOR_WIDTH))
     }
 
-    private fun printlnInternal(priority: Int, tag: String?, msg: String?, locatorWithPadding: String = "".padEnd(LOCATOR_WIDTH, '.')): Int {
+    @JvmStatic
+    fun pn(priority: Int, depth: Int, vararg args: Any?): Int {
+        if (!LOG) return 0
+        val stack = Exception().stackTrace[1 + depth]
+        return ps(priority, stack, *args)
+    }
+
+    @JvmStatic
+    fun p(priority: Int, vararg args: Any?): Int {
+        if (!LOG) return 0
+        val stack = getStack()
+        return ps(priority, stack, *args)
+    }
+
+    @JvmStatic
+    fun ps(priority: Int, stack: StackTraceElement, vararg args: Any?): Int {
+        if (!LOG) return 0
+        val tag = getMethodNameWidth(stack)
+        val locator = getLocatorWidth(stack)
+        return ptl(priority, tag, locator, *args)
+    }
+
+    @JvmStatic
+    fun ptl(priority: Int, tag: String, locator: String, vararg args: Any?): Int {
+        if (!LOG) return 0
+        val msg = getMessage(*args)
+        return printlnInternal(priority, tag, msg, locator)
+    }
+
+
+    private fun printlnInternal(priority: Int, tag: String?, msg: String?, locator: String = "".padEnd(LOCATOR_WIDTH, '.')): Int {
         flog(msg)
 
-        msg ?: return android.util.Log.println(priority, tag, locatorWithPadding + PREFIX)
+        msg ?: return android.util.Log.println(priority, tag, locator + PREFIX)
 
         return msg.split(LF)
             .flatMap { it.splitSafe(MAX_LOG_LINE_BYTE_SIZE) }
             .run {
                 when (size) {
-                    0 -> android.util.Log.println(priority, tag, locatorWithPadding + PREFIX)
-                    1 -> android.util.Log.println(priority, tag, locatorWithPadding + PREFIX + this[0])
+                    0 -> android.util.Log.println(priority, tag, locator + PREFIX)
+                    1 -> android.util.Log.println(priority, tag, locator + PREFIX + this[0])
                     else -> {
-                        if (PREFIX_MULTILINE.isNotBlank()) android.util.Log.println(priority, tag, locatorWithPadding + PREFIX_MULTILINE)
+                        if (PREFIX_MULTILINE.isNotBlank()) android.util.Log.println(priority, tag, locator + PREFIX_MULTILINE)
                         sumOf { android.util.Log.println(priority, tag, PREFIX + it) }
                     }
                 }
@@ -252,7 +245,7 @@ object Log {
     @JvmStatic
     fun toast(context: Context, vararg args: Any?) {
         if (!LOG) return
-        e(*args)
+        p(ERROR, *args)
         Toast.makeText(context, getMessage(*args), Toast.LENGTH_SHORT).show()
     }
 
@@ -662,8 +655,8 @@ object Log {
     fun println(vararg args: Any?) {
         if (!LOG) return
 
-        val info = getStack()
-        val tag = getTag(info)
+        val stack = getStack()
+        val tag = getClzMethod(stack) + ".." + getLocator(stack)
         val msg = getMessage(*args)
 
         val sa = msg.split(LF).flatMap { it.splitSafe(MAX_LOG_LINE_BYTE_SIZE) }
@@ -680,81 +673,6 @@ object Log {
             kotlin.io.println(tag + it)
         }
     }
-
-    //etc
-    private val String.width get() = toByteArray(Charset.forName("euc-kr")).size
-    fun String.takeWidthLastSafe(length: Int = TAG_LENGTH): String {
-        var text = takeLast(length)
-        while (text.width != length) {
-            text = if (text.width > length)
-                text.drop(1)
-            else
-                text.padStart(length - text.width + text.length, '.')
-        }
-        return text
-    }
-
-    fun String.takeWidthSafe(length: Int = TAG_LENGTH): String {
-        var text = take(length)
-        while (text.width != length) {
-            text = if (text.width > length)
-                text.dropLast(1)
-            else
-                text.padEnd(length - text.width + text.length, '.')
-        }
-        return text
-    }
-
-    fun String.splitSafe(lengthByte: Int): List<String> {
-        require(lengthByte >= 3) { "min split length getter then 3" }
-        val textByteArray = toByteArray()
-        if (textByteArray.size <= lengthByte)
-            return listOf(this)
-
-        val tokens = mutableListOf<String>()
-        var startOffset = 0
-        while (startOffset + lengthByte < textByteArray.size) {
-            val token = textByteArray.takeSafe(lengthByte, startOffset)
-            tokens += token
-            startOffset += token.toByteArray().size
-        }
-        tokens += String(textByteArray, startOffset, textByteArray.size - startOffset)
-        return tokens
-    }
-
-    fun ByteArray.takeSafe(lengthByte: Int, startOffset: Int): String {
-        if (size <= startOffset)
-            return ""
-
-        //앞에서 문자중간을 건너뜀
-        var offset = startOffset
-        while (size > offset && get(offset) and 0b1100_0000.toByte() == 0b1000_0000.toByte())
-            offset++
-
-        //문자열 길이가 짧은경우 끝까지
-        if (size <= offset + lengthByte)
-            return String(this, offset, size - offset)
-
-        //char 중간이 아니면 거기까지
-        if (get(offset + lengthByte) and 0b1100_0000.toByte() != 0b1000_0000.toByte())
-            return String(this, offset, lengthByte)
-
-        //char 중간이거나 끝이면 앞으로 땡김
-        var position = offset + lengthByte
-        while (get(--position) and 0b1100_0000.toByte() == 0b1000_0000.toByte()) Unit
-
-        val charByteMoveCount = offset + lengthByte - position
-        val charByteLength = get(position).inv().countLeadingZeroBits()
-
-        return if (charByteLength == charByteMoveCount)
-        //char 끝이면 거기까지
-            String(this, offset, lengthByte)
-        else
-        //char 중간이면 뒤에버림
-            String(this, offset, position - offset)
-    }
-
-    fun String.takeSafe(lengthByte: Int, startOffset: Int = 0) = toByteArray().takeSafe(lengthByte, startOffset)
 
     /////////////////////////////////////////////////////////////////////////////
     //over lap func
