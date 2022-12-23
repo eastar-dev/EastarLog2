@@ -14,16 +14,21 @@
  * limitations under the License.
  */
 
-@file:Suppress("FunctionName", "unused", "UNUSED_PARAMETER")
+@file:Suppress("FunctionName", "unused", "UNUSED_PARAMETER", "UnusedReceiverParameter")
 
 package android.log
 
+import android.app.Activity
 import android.content.Context
+import android.database.Cursor
 import android.graphics.Bitmap
 import android.net.Uri
+import android.os.Bundle
 import android.view.MotionEvent
 import android.view.View
-import androidx.annotation.VisibleForTesting
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.SavedStateHandle
 import java.io.File
 
 /** @author eastar*/
@@ -37,6 +42,9 @@ object Log {
 
     @JvmField
     var LOG = false
+
+    @JvmField
+    var LOG_SYSOUT = false
 
     @JvmField
     var FILE_LOG: File? = null
@@ -57,7 +65,7 @@ object Log {
     var PREFIX_MULTILINE: String = "$PREFIX▼"
 
     @JvmField
-    var TAG_WIDTH = 35
+    var TAG_WIDTH = 34
 
     @JvmField
     var LOCATOR_WIDTH = 40
@@ -73,6 +81,12 @@ object Log {
 
     @JvmField
     var logFilterPredicate: (StackTraceElement) -> Boolean = { false }
+
+    @JvmField
+    var getTag: (methodName: String?, locator: String) -> String = { _, _ -> "" }
+
+    @JvmField
+    var getPreMsg: (methodName: String?, locator: String) -> String = { _, _ -> "" }
 
     @JvmStatic
     fun getLocator(stack: StackTraceElement): String = ""
@@ -93,13 +107,13 @@ object Log {
     fun getClzMethod(stack: StackTraceElement): String = ""
 
     @JvmStatic
+    fun getStackFilter(filterClassNameRegex: String? = null): StackTraceElement = Exception().stackTrace.first()
+
+    @JvmStatic
     fun pm(priority: Int, method: String, vararg args: Any?): Int = 0
 
     @JvmStatic
     fun pc(priority: Int, method: String, vararg args: Any?): Int = 0
-
-    @JvmStatic
-    fun pl(priority: Int, tag: String, locator: String, vararg args: Any?): Int = 0
 
     @JvmStatic
     fun pn(priority: Int, depth: Int, vararg args: Any?): Int = 0
@@ -111,12 +125,7 @@ object Log {
     fun ps(priority: Int, stack: StackTraceElement, vararg args: Any?): Int = 0
 
     @JvmStatic
-    fun ptl(priority: Int, tag: String, locator: String, vararg args: Any?): Int = 0
-
-
-    @JvmStatic
-    fun toast(context: Context, vararg args: Any?) = Unit
-
+    fun pml(priority: Int, tag: String, locator: String, vararg args: Any?): Int = 0
 
     @JvmStatic
     fun debounce(vararg args: Any?) = Unit
@@ -128,7 +137,6 @@ object Log {
     fun clz(clz: Class<*>) = Unit
 
     /** dump */
-
     @JvmStatic
     fun _toHexString(byteArray: ByteArray?): String = ""
 
@@ -138,13 +146,13 @@ object Log {
     @JvmStatic
     fun _DUMP_object(o: Any?): String = ""
 
-
     fun provider(context: Context, uri: Uri?) = Unit
 
+    @JvmStatic
+    fun tic_s() = Unit
 
     @JvmStatic
     fun tic(vararg args: Any? = arrayOf("")) = Unit
-
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //image save
@@ -155,13 +163,11 @@ object Log {
     @JvmStatic
     fun compress(name: String, bmp: Bitmap) = Unit
 
-
     //flog
     @JvmStatic
     fun flog(vararg args: Any?) = Unit
 
     fun measure(widthMeasureSpec: Int, heightMeasureSpec: Int) = Unit
-
 
     @JvmStatic
     fun onTouchEvent(event: MotionEvent) = Unit
@@ -172,7 +178,6 @@ object Log {
 
     class TraceLog : Throwable()
 
-    @VisibleForTesting
     @JvmStatic
     fun println(vararg args: Any?) = Unit
 
@@ -207,5 +212,22 @@ object Log {
 
     @JvmStatic
     fun getStackTraceString(th: Throwable): String = ""
-
 }
+
+
+val Boolean?.IW: Int get() = if (this == true) android.util.Log.INFO else android.util.Log.WARN
+fun String.takeLastPadStartSafeWidth(length: Int = Log.TAG_WIDTH): String = ""
+
+fun String.takePadEndSafeWidth(length: Int = Log.TAG_WIDTH): String = ""
+
+fun Lifecycle._DUMP() = Unit
+
+fun Activity._DUMP() = Unit
+
+fun Fragment._DUMP() = Unit
+
+fun SavedStateHandle._DUMP() = Unit
+
+fun Bundle._DUMP() = Unit
+
+fun Cursor?._DUMP(count: Int = 100) = Unit

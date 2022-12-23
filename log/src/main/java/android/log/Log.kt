@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-@file:Suppress("FunctionName", "unused", "MemberVisibilityCanBePrivate")
+@file:Suppress("FunctionName", "unused", "MemberVisibilityCanBePrivate", "UNUSED_ANONYMOUS_PARAMETER")
 
 package android.log
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.database.Cursor
@@ -36,14 +37,20 @@ import android.view.View.MeasureSpec
 import android.view.ViewGroup
 import android.webkit.WebView
 import android.widget.TextView
-import android.widget.Toast
 import androidx.annotation.VisibleForTesting
+import androidx.core.view.children
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.SavedStateHandle
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import java.io.StringWriter
 import java.lang.reflect.Method
+import java.nio.charset.Charset
 import java.text.SimpleDateFormat
 import java.util.Arrays
 import java.util.Date
@@ -55,6 +62,8 @@ import javax.xml.transform.OutputKeys
 import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
+import kotlin.experimental.and
+import kotlin.experimental.inv
 
 /** @author eastar*/
 object Log {
@@ -68,6 +77,9 @@ object Log {
 
     @JvmField
     var LOG = true
+
+    @JvmField
+    var LOG_SYSOUT = false
 
     @JvmField
     var FILE_LOG: File? = null
@@ -88,7 +100,7 @@ object Log {
     var PREFIX_MULTILINE: String = "$PREFIX▼"
 
     @JvmField
-    var TAG_WIDTH = 35
+    var TAG_WIDTH = 34
 
     @JvmField
     var LOCATOR_WIDTH = 40
@@ -104,6 +116,16 @@ object Log {
 
     @JvmField
     var logFilterPredicate: (StackTraceElement) -> Boolean = { false }
+
+    @JvmField
+    var getTag: (methodName: String?, locator: String) -> String = { methodName, locator ->
+        (methodName ?: "").takePadEndSafeWidth(TAG_WIDTH)
+    }
+
+    @JvmField
+    var getPreMsg: (methodName: String?, locator: String) -> String = { methodName, locator ->
+        locator.padEndWidth(LOCATOR_WIDTH)
+    }
 
     @JvmStatic
     fun getLocator(stack: StackTraceElement): String = "(%s:%d)".format(stack.fileName, stack.lineNumber)
@@ -124,7 +146,7 @@ object Log {
     fun getClzMethod(stack: StackTraceElement): String = runCatching { getClzName(stack) + "::" + getMethodName(stack) }.getOrDefault(stack.className)
 
     @JvmStatic
-    private fun getStackFilter(filterClassNameRegex: String? = null): StackTraceElement {
+    fun getStackFilter(filterClassNameRegex: String? = null): StackTraceElement {
         return Exception().stackTrace.filterNot {
             it.className == javaClass.name
         }.run {
@@ -186,13 +208,6 @@ object Log {
     }
 
     @JvmStatic
-    fun pl(priority: Int, tag: String, locator: String, vararg args: Any?): Int {
-        if (!LOG) return 0
-        val msg = getMessage(*args)
-        return printlnInternal(priority, tag.takePadEndSafeWidth(TAG_WIDTH), msg, locator.takePadEndSafeWidth(LOCATOR_WIDTH))
-    }
-
-    @JvmStatic
     fun pn(priority: Int, depth: Int, vararg args: Any?): Int {
         if (!LOG) return 0
         val stack = Exception().stackTrace[1 + depth]
@@ -209,70 +224,65 @@ object Log {
     @JvmStatic
     fun ps(priority: Int, stack: StackTraceElement, vararg args: Any?): Int {
         if (!LOG) return 0
-        val tag = getMethodNameWidth(stack)
-        val locator = getLocatorWidth(stack)
-        return ptl(priority, tag, locator, *args)
+        if (LOG_SYSOUT) return println(*args).let { 0 }
+        val methodName = getMethodName(stack)
+        val locator = getLocator(stack)
+        return this.pml(priority, methodName, locator, *args)
     }
 
     @JvmStatic
-    fun ptl(priority: Int, tag: String, locator: String, vararg args: Any?): Int {
+    fun pml(priority: Int, methodName: String, locator: String, vararg args: Any?): Int {
         if (!LOG) return 0
         val msg = getMessage(*args)
-        return printlnInternal(priority, tag, msg, locator)
+        return printlnInternal(priority, methodName, locator, msg)
     }
 
-
-    private fun printlnInternal(priority: Int, tag: String?, msg: String?, locator: String = "".padEnd(LOCATOR_WIDTH, '.')): Int {
+    private fun printlnInternal(priority: Int, methodName: String?, locator: String, msg: String?): Int {
         flog(msg)
 
-        msg ?: return android.util.Log.println(priority, tag, locator + PREFIX)
+        val preMsg = getPreMsg(methodName, locator)
+        val tag = getTag(methodName, locator)
+
+        msg ?: return android.util.Log.println(priority, tag, preMsg + PREFIX)
 
         return msg.split(LF)
             .flatMap { it.splitSafe(MAX_LOG_LINE_BYTE_SIZE) }
             .run {
                 when (size) {
-                    0 -> android.util.Log.println(priority, tag, locator + PREFIX)
-                    1 -> android.util.Log.println(priority, tag, locator + PREFIX + this[0])
+                    0 -> android.util.Log.println(priority, tag, preMsg + PREFIX)
+                    1 -> android.util.Log.println(priority, tag, preMsg + PREFIX + this[0])
                     else -> {
-                        if (PREFIX_MULTILINE.isNotBlank()) android.util.Log.println(priority, tag, locator + PREFIX_MULTILINE)
+                        if (PREFIX_MULTILINE.isNotBlank()) android.util.Log.println(priority, tag, preMsg + PREFIX_MULTILINE)
                         sumOf { android.util.Log.println(priority, tag, PREFIX + it) }
                     }
                 }
             }
     }
 
+    private var lastMillis: Long = 0
 
-    @JvmStatic
-    fun toast(context: Context, vararg args: Any?) {
-        if (!LOG) return
-        p(ERROR, *args)
-        Toast.makeText(context, getMessage(*args), Toast.LENGTH_SHORT).show()
-    }
-
-    private var timeout: Long = 0
-
-    @JvmStatic
     fun debounce(vararg args: Any?) {
         if (!LOG) return
-        if (timeout < System.nanoTime() - TimeUnit.SECONDS.toNanos(1))
+        if (lastMillis > System.currentTimeMillis() - TimeUnit.SECONDS.toMillis(1))
             return
-        timeout = System.nanoTime()
-        p(ERROR, *args)
+        lastMillis = System.currentTimeMillis()
+        i(*args)
     }
 
     @JvmStatic
     fun viewTree(parent: View, depth: Int = 0) {
         if (!LOG) return
+
         if (parent !is ViewGroup) {
             pn(ERROR, depth + 2, _DUMP(parent, 0))
             return
         }
 
-        for (i in 0 until parent.childCount) {
-            val child = parent.getChildAt(i)
-            pn(ERROR, depth + 2, _DUMP(child, depth))
-            if (child is ViewGroup)
+        parent.children.forEach { child ->
+            pn(ERROR, depth + 2, _DUMP(child, depth + 1))
+            if (child is ViewGroup) {
                 viewTree(child, depth + 1)
+            }
         }
     }
 
@@ -340,9 +350,7 @@ object Log {
     }.getOrDefault(text)
 
     private fun _DUMP(method: Method): String = method.run {
-        "$modifiers ${
-            returnType.simpleName.padEnd(20).take(20)
-        }${declaringClass.simpleName}.$name(${parameterTypes.joinToString { it.simpleName }})"
+        "$modifiers ${returnType.simpleName.padEnd(20).take(20)}${declaringClass.simpleName}.$name(${parameterTypes.joinToString { it.simpleName }})"
     }
 
     private fun _DUMP(v: View, depth: Int = 0): String {
@@ -374,18 +382,8 @@ object Log {
     }
 
     private fun _DUMP(bundle: Bundle?): String {
-        if (bundle == null) return "null_Bundle"
-        val sb = StringBuilder()
-        bundle.keySet().forEach {
-            val o = bundle[it]
-            when {
-                o == null -> sb.append("Object $it;//null")
-                o.javaClass.isArray -> sb.append(o.javaClass.simpleName + " " + it + ";//" + (o as Array<*>).contentToString())
-                else -> sb.append(o.javaClass.simpleName + " " + it + ";//" + o.toString())
-            }
-            sb.append("\n")
-        }
-        return sb.toString()
+        bundle ?: return "null_Bundle"
+        return bundle.keySet().joinToString("\n") { "${it.padEnd(20)}, ${bundle.get(it)}, ${bundle.get(it)?.javaClass?.simpleName ?: "NULL"}" }
     }
 
     private fun _DUMP(cls: Class<*>?): String {
@@ -393,31 +391,27 @@ object Log {
     }
 
     private fun _DUMP(uri: Uri?): String {
-        if (uri == null) return "null_Uri"
+        uri ?: return "null_Uri"
         //		return uri.toString();
         val sb = StringBuilder()
         sb.append("\r\n Uri                       ").append(uri.toString())
         sb.append("\r\n Scheme                    ").append(if (uri.scheme != null) uri.scheme else "null")
         sb.append("\r\n Host                      ").append(if (uri.host != null) uri.host else "null")
         sb.append("\r\n Path                      ").append(if (uri.path != null) uri.path else "null")
-        sb.append("\r\n LastPathSegment           ")
-            .append(if (uri.lastPathSegment != null) uri.lastPathSegment else "null")
+        sb.append("\r\n LastPathSegment           ").append(if (uri.lastPathSegment != null) uri.lastPathSegment else "null")
         sb.append("\r\n Query                     ").append(if (uri.query != null) uri.query else "null")
         sb.append("\r\n Fragment                  ").append(if (uri.fragment != null) uri.fragment else "null")
         return sb.toString()
     }
 
     private fun _DUMP(intent: Intent?): String {
-        if (intent == null) return "null_Intent"
-        val sb = StringBuilder()
+        intent ?: return "null_Intent"
+        val sb = StringBuilder(intent.component?.className ?: intent.toUri(0))
         //@formatter:off
         sb.append(if (intent.action     != null) (if (sb.isNotEmpty()) "\n" else "") + "Action     " + intent.action    .toString() else "")
         sb.append(if (intent.data       != null) (if (sb.isNotEmpty()) "\n" else "") + "Data       " + intent.data      .toString() else "")
-        sb.append(if (intent.categories != null) (if (sb.isNotEmpty()) "\n" else "") + "Categories " + intent.categories.toString() else "")
         sb.append(if (intent.type       != null) (if (sb.isNotEmpty()) "\n" else "") + "Type       " + intent.type      .toString() else "")
         sb.append(if (intent.scheme     != null) (if (sb.isNotEmpty()) "\n" else "") + "Scheme     " + intent.scheme    .toString() else "")
-        sb.append(if (intent.`package`  != null) (if (sb.isNotEmpty()) "\n" else "") + "Package    " + intent.`package` .toString() else "")
-        sb.append(if (intent.component  != null) (if (sb.isNotEmpty()) "\n" else "") + "Component  " + intent.component .toString() else "")
         sb.append(if (intent.flags      != 0x00) (if (sb.isNotEmpty()) "\n" else "") + "Flags      " + Integer.toHexString(intent.flags) else "")
         //@formatter:on
         if (intent.extras != null) sb.append((if (sb.isNotEmpty()) "\n" else "") + _DUMP(intent.extras))
@@ -502,43 +496,31 @@ object Log {
             e("context==null || uri == null")
             return
         }
-        context.contentResolver.query(uri, null, null, null, null).use { cursor(it) }
+        context.contentResolver.query(uri, null, null, null, null).use { it._DUMP(100) }
     }
 
-    private var SEED_S = 0L
+    private var ticTimer = 0L
+
+    @JvmStatic
+    fun tic_s() {
+        if (!LOG) return
+        synchronized(this) {
+            ticTimer = System.currentTimeMillis()
+        }
+    }
 
     @JvmStatic
     fun tic(vararg args: Any? = arrayOf("")) {
         if (!LOG) return
         synchronized(this) {
             val e = System.currentTimeMillis()
-            val s = SEED_S
-            val interval = if (SEED_S == 0L) 0L else e - s
-            SEED_S = e
+            val s = ticTimer
+            val interval = if (ticTimer == 0L) 0L else e - s
+            ticTimer = e
             e(String.format(Locale.getDefault(), "%,15d", interval), getMessage(*args))
         }
     }
 
-    private fun cursor(c: Cursor?) {
-        c ?: return
-        e("<${c.count}>")
-        e(c.columnNames)
-
-        val dat = arrayOfNulls<String>(c.columnCount)
-        if (!c.isBeforeFirst) {
-            for (i in 0 until c.columnCount)
-                dat[i] = if (c.getType(i) == Cursor.FIELD_TYPE_BLOB) "BLOB" else c.getString(i)
-            e(dat.contentToString())
-        } else {
-            val keep = c.position
-            while (c.moveToNext()) {
-                for (i in 0 until c.columnCount)
-                    dat[i] = if (c.getType(i) == Cursor.FIELD_TYPE_BLOB) "BLOB" else c.getString(i)
-                e(dat.contentToString())
-            }
-            c.moveToPosition(keep)
-        }
-    }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////
     //image save
@@ -736,5 +718,157 @@ object Log {
         if (!LOG) return ""
         return android.util.Log.getStackTraceString(th)
     }
+}
 
+private val String?.singleLog: String
+    get() = this?.toByteArray()
+        ?.take(3500)
+        ?.dropLastWhile { it and 0xc0.toByte() != 0x80.toByte() }
+        ?.toByteArray()
+        ?.let { String(it) }
+        ?.replace("\r", "")
+        ?.replace('\n', '↵')
+        ?: ""
+
+val Boolean?.IW: Int get() = if (this == true) android.util.Log.INFO else android.util.Log.WARN
+private val String.width get() = toByteArray(Charset.forName("euc-kr")).size
+private fun String.padEndWidth(width: Int = Log.TAG_WIDTH, padChar: Char = '.'): String =
+    if (width - this.width > 0)
+        padEnd(length + width - this.width, padChar)
+    else
+        this
+
+internal fun String.takeLastPadStartSafeWidth(length: Int = Log.TAG_WIDTH): String {
+    var text = takeLast(length)
+    while (text.width != length) {
+        text = if (text.width > length)
+            text.drop(1)
+        else
+            text.padStart(length - text.width + text.length, '.')
+    }
+    return text
+}
+
+internal fun String.takePadEndSafeWidth(length: Int = Log.TAG_WIDTH): String {
+    var text = take(length)
+    while (text.width != length) {
+        text = if (text.width > length)
+            text.dropLast(1)
+        else
+            text.padEnd(length - text.width + text.length, '.')
+    }
+    return text
+}
+
+internal fun String.splitSafe(lengthByte: Int): List<String> {
+    require(lengthByte >= 3) { "min split length getter then 3" }
+    val textByteArray = toByteArray()
+    if (textByteArray.size <= lengthByte)
+        return listOf(this)
+
+    val tokens = mutableListOf<String>()
+    var startOffset = 0
+    while (startOffset + lengthByte < textByteArray.size) {
+        val token = textByteArray.takeSafe(lengthByte, startOffset)
+        tokens += token
+        startOffset += token.toByteArray().size
+    }
+    tokens += String(textByteArray, startOffset, textByteArray.size - startOffset)
+    return tokens
+}
+
+internal fun ByteArray.takeSafe(lengthByte: Int, startOffset: Int): String {
+    if (size <= startOffset)
+        return ""
+
+    //앞에서 문자중간을 건너뜀
+    var offset = startOffset
+    while (size > offset && get(offset) and 0b1100_0000.toByte() == 0b1000_0000.toByte())
+        offset++
+
+    //문자열 길이가 짧은경우 끝까지
+    if (size <= offset + lengthByte)
+        return String(this, offset, size - offset)
+
+    //char 중간이 아니면 거기까지
+    if (get(offset + lengthByte) and 0b1100_0000.toByte() != 0b1000_0000.toByte())
+        return String(this, offset, lengthByte)
+
+    //char 중간이거나 끝이면 앞으로 땡김
+    var position = offset + lengthByte
+    while (get(--position) and 0b1100_0000.toByte() == 0b1000_0000.toByte()) Unit
+
+    val charByteMoveCount = offset + lengthByte - position
+    val charByteLength = get(position).inv().countLeadingZeroBits()
+
+    return if (charByteLength == charByteMoveCount)
+    //char 끝이면 거기까지
+        String(this, offset, lengthByte)
+    else
+    //char 중간이면 뒤에버림
+        String(this, offset, position - offset)
+}
+
+internal fun String.takeSafe(lengthByte: Int, startOffset: Int = 0) = toByteArray().takeSafe(lengthByte, startOffset)
+
+///////////////////////////////////////////////////////////////////////////
+// Log Ktx
+///////////////////////////////////////////////////////////////////////////
+private val stack: StackTraceElement
+    get() = Exception().stackTrace.run {
+        filterNot {
+            it.className.startsWith("android.log")
+        }.filterNot {
+            it.lineNumber < 0
+        }.firstOrNull() ?: first()
+    }
+
+fun Lifecycle._DUMP() = addObserver(object : LifecycleEventObserver {
+    override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
+        Log.ps(Log.ERROR, stack, "LifecycleChanged", source.javaClass.simpleName, event)
+    }
+})
+
+fun Activity._DUMP() = intent.extras?._DUMP()
+
+fun Fragment._DUMP() = arguments?._DUMP()
+
+fun SavedStateHandle._DUMP() {
+    Log.ps(Log.ERROR, stack, "=".repeat(50))
+    keys().map {
+        it to get<Any>(it)
+    }.forEach { (key, value) ->
+        Log.ps(Log.WARN, stack, key, value, value?.javaClass?.simpleName)
+    }
+    Log.w("=".repeat(50))
+}
+
+fun Bundle._DUMP() {
+    Log.ps(Log.ERROR, stack, "=".repeat(50))
+    keySet().map {
+        it to get(it)
+    }.forEach { (key, value) ->
+        Log.ps(Log.WARN, stack, key, value, value?.javaClass?.simpleName)
+    }
+    Log.w("=".repeat(50))
+}
+
+fun Cursor?._DUMP(count: Int = 100) {
+    Log.ps(Log.ERROR, stack, "=".repeat(50))
+    val c = this ?: return
+    Log.ps(Log.WARN, stack, "<${c.count}>")
+    Log.ps(Log.INFO, stack, " " + c.columnNames.contentToString())
+
+    val dat = arrayOfNulls<String>(c.columnCount)
+    val keep = c.position
+    if (keep >= 0) {
+        repeat(c.columnCount) { dat[it] = if (c.getType(it) == Cursor.FIELD_TYPE_BLOB) "BLOB" else c.getString(it) }
+        Log.ps(Log.INFO, stack, " " + dat.contentToString())
+    }
+    while (c.moveToNext() && c.position < keep + count) {
+        repeat(c.columnCount) { dat[it] = if (c.getType(it) == Cursor.FIELD_TYPE_BLOB) "BLOB" else c.getString(it) }
+        Log.ps(Log.INFO, stack, " " + dat.contentToString())
+    }
+    c.moveToPosition(keep)
+    Log.w("=".repeat(50))
 }

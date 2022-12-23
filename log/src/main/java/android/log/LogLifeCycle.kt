@@ -13,12 +13,12 @@ fun Application.logLifeCycle() = registerActivityLifecycleCallbacks(object : App
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
         logFragment(activity)
         val ext = if (activity.javaClass.getAnnotation(Metadata::class.java) == null) "java" else "kt"
-        activity.javaClass.simpleName.let { Log.pl(Log.LIFECYCLE_CREATE, "onActivityCreated", "($it.$ext:0)", it) }
+        activity.javaClass.simpleName.let { Log.pml(Log.LIFECYCLE_CREATE, "onActivityCreated", "($it.$ext:0)", it) }
     }
 
     override fun onActivityDestroyed(activity: Activity) {
         val ext = if (activity.javaClass.getAnnotation(Metadata::class.java) == null) "java" else "kt"
-        activity.javaClass.simpleName.let { Log.pl(Log.LIFECYCLE_DESTROYED, "onActivityDestroyed", "($it.$ext:0)", it) }
+        activity.javaClass.simpleName.let { Log.pml(Log.LIFECYCLE_DESTROYED, "onActivityDestroyed", "($it.$ext:0)", it) }
     }
 
     override fun onActivityStarted(activity: Activity) {}
@@ -37,7 +37,7 @@ private fun logFragment(activity: Activity) {
                     f.javaClass.simpleName.takeUnless {
                         "SupportRequestManagerFragment" == it
                     }?.let {
-                        Log.pl(Log.LIFECYCLE_CREATE, "onFragmentCreated", "($it.$ext:0)", it)
+                        Log.pml(Log.LIFECYCLE_CREATE, "onFragmentCreated", "($it.$ext:0)", it)
                     }
                 }
 
@@ -46,7 +46,7 @@ private fun logFragment(activity: Activity) {
                     f.javaClass.simpleName.takeUnless {
                         "SupportRequestManagerFragment" == it
                     }?.let {
-                        Log.pl(Log.LIFECYCLE_DESTROYED, "onFragmentDestroyed", "($it.$ext:0)", it)
+                        Log.pml(Log.LIFECYCLE_DESTROYED, "onFragmentDestroyed", "($it.$ext:0)", it)
                     }
                 }
             }, true
