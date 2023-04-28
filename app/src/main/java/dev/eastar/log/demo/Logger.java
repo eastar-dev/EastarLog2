@@ -1,6 +1,6 @@
 package dev.eastar.log.demo;
 
-import android.util.Log;
+import android.log.Log;
 
 public class Logger {
     public static int e(String formatter, Object... args) {
