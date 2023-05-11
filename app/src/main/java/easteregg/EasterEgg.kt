@@ -10,14 +10,20 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.log.Log
 import android.widget.SimpleAdapter
+import androidx.appcompat.app.AppCompatActivity
 
-fun Application.easterEgg() = registerActivityLifecycleCallbacks(
-    EasterEggRunner(
-        EasterEgg::class.java.name,
-    )
-)
+fun Application.easterEgg() = easterEgg(EasterEgg::class)
 
 class EasterEgg(private val activity: Activity) {
+    fun func1(activity: Context, context: Context) {
+    }
+
+    fun func2() {
+    }
+
+    fun AppCompatActivity.func3() {
+    }
+
     fun Activity.allActivity(context: Context) {
         val items = packageManager
             .getPackageInfo(packageName, PackageManager.GET_ACTIVITIES)

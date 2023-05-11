@@ -14,6 +14,11 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnPreDraw
 import java.lang.reflect.Method
+import kotlin.reflect.KClass
+
+fun Application.easterEgg(vararg easterEggs: KClass<*>) = registerActivityLifecycleCallbacks(
+    EasterEggRunner(*easterEggs.map { it::class.java.name }.toTypedArray())
+)
 
 class EasterEggRunner(
     private vararg val easterEggClzName: String
