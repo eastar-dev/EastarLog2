@@ -17,7 +17,7 @@ import java.lang.reflect.Method
 import kotlin.reflect.KClass
 
 fun Application.easterEgg(vararg easterEggs: KClass<*>) = registerActivityLifecycleCallbacks(
-    EasterEggRunner(*easterEggs.map { it::class.java.name }.toTypedArray())
+    EasterEggRunner(*easterEggs.map { it.java.name }.toTypedArray())
 )
 
 class EasterEggRunner(

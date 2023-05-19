@@ -22,6 +22,7 @@ class EasterEgg(private val activity: Activity) {
     }
 
     fun AppCompatActivity.func3() {
+        throw Exception("test")
     }
 
     fun Activity.allActivity(context: Context) {
