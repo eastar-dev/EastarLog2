@@ -15,15 +15,7 @@ abstract class LogFragment : androidx.fragment.app.Fragment {
     }
 
     override fun startActivityForResult(intent: Intent, requestCode: Int) {
-        Log.pc(
-            Log.START,
-            if (requestCode == -1) "startActivity" else "startActivityForResult",
-            "▶▶",
-            javaClass,
-            intent.component?.shortClassName ?: intent.toUri(0),
-            intent,
-            "0x%08X".format(requestCode)
-        )
+        Log.pc(Log.START, if (requestCode == -1) "startActivity" else "startActivityForResult", "▶▶", "requestCode=$requestCode", javaClass, intent.toUri(0))
         super.startActivityForResult(intent, requestCode)
     }
 }

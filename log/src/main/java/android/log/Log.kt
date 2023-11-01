@@ -24,7 +24,6 @@ import android.content.Intent
 import android.database.Cursor
 import android.graphics.Bitmap
 import android.graphics.Bitmap.CompressFormat
-import android.graphics.BitmapFactory
 import android.graphics.Point
 import android.graphics.Rect
 import android.graphics.RectF
@@ -52,10 +51,8 @@ import java.io.StringWriter
 import java.lang.reflect.Method
 import java.nio.charset.Charset
 import java.text.SimpleDateFormat
-import java.util.Arrays
 import java.util.Date
 import java.util.Locale
-import java.util.StringTokenizer
 import java.util.concurrent.TimeUnit
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.OutputKeys
@@ -144,21 +141,6 @@ object Log {
 
     @JvmStatic
     fun getClzMethod(stack: StackTraceElement): String = runCatching { getClzName(stack) + "::" + getMethodName(stack) }.getOrDefault(stack.className)
-
-    @JvmStatic
-    fun getStackFilter(filterClassNameRegex: String? = null): StackTraceElement {
-        return Exception().stackTrace.filterNot {
-            it.className == javaClass.name
-        }.run {
-            asSequence().filterNot {
-                it.className.matches(defaultLogFilterClassNameRegex)
-            }.filterNot { stackTraceElement ->
-                filterClassNameRegex?.let { stackTraceElement.className.matches(filterClassNameRegex.toRegex()) } ?: false
-            }.filterNot {
-                it.lineNumber < 0
-            }.firstOrNull() ?: first()
-        }
-    }
 
     private fun getStack(): StackTraceElement {
         return Exception().stackTrace.filterNot {
@@ -269,22 +251,6 @@ object Log {
         i(*args)
     }
 
-    @JvmStatic
-    fun viewTree(parent: View, depth: Int = 0) {
-        if (!LOG) return
-
-        if (parent !is ViewGroup) {
-            pn(ERROR, depth + 2, _DUMP(parent, 0))
-            return
-        }
-
-        parent.children.forEach { child ->
-            pn(ERROR, depth + 2, _DUMP(child, depth + 1))
-            if (child is ViewGroup) {
-                viewTree(child, depth + 1)
-            }
-        }
-    }
 
     @JvmStatic
     fun clz(clz: Class<*>) {
@@ -353,37 +319,19 @@ object Log {
         "$modifiers ${returnType.simpleName.padEnd(20).take(20)}${declaringClass.simpleName}.$name(${parameterTypes.joinToString { it.simpleName }})"
     }
 
-    private fun _DUMP(v: View, depth: Int = 0): String {
-        val space = "                    "
-        val out = StringBuilder(128)
-        out.append(space)
-        when (v) {
-            is WebView -> out.insert(depth, "W:" + Integer.toHexString(System.identityHashCode(v)) + ":" + v.title)
-            is TextView -> out.insert(depth, "T:" + Integer.toHexString(System.identityHashCode(v)) + ":" + v.text)
-            else -> out.insert(
-                depth,
-                "N:" + Integer.toHexString(System.identityHashCode(v)) + ":" + v.javaClass.simpleName
-            )
-        }
-        out.setLength(space.length)
-        val id = v.id
-        val r = v.resources
-        if (id != View.NO_ID && id ushr 24 != 0 && r != null) {
-            val pkgname: String = when (id and -0x1000000) {
-                0x7f000000 -> "app"
-                0x01000000 -> "android"
-                else -> r.getResourcePackageName(id)
-            }
-            val typename = r.getResourceTypeName(id)
-            val entryname = r.getResourceEntryName(id)
-            out.append(" $pkgname:$typename/$entryname")
-        }
-        return out.toString()
-    }
 
+    @Suppress("DEPRECATION")
     private fun _DUMP(bundle: Bundle?): String {
-        bundle ?: return "null_Bundle"
-        return bundle.keySet().joinToString("\n") { "${it.padEnd(20)}, ${bundle.get(it)}, ${bundle.get(it)?.javaClass?.simpleName ?: "NULL"}" }
+        val b = bundle ?: return ""
+        return b.keySet().sorted()
+            .joinToString("\n") { k ->
+                val v = b.get(k)
+                if (v?.javaClass?.isArray == true)
+                    "$k:${v.javaClass.simpleName}=${(v as Array<*>).contentToString()}"
+                else
+                    "$k:${v?.javaClass?.simpleName}=$v"
+            }
+
     }
 
     private fun _DUMP(cls: Class<*>?): String {
@@ -394,41 +342,32 @@ object Log {
         uri ?: return "null_Uri"
         //		return uri.toString();
         val sb = StringBuilder()
-        sb.append("\r\n Uri                       ").append(uri.toString())
-        sb.append("\r\n Scheme                    ").append(if (uri.scheme != null) uri.scheme else "null")
-        sb.append("\r\n Host                      ").append(if (uri.host != null) uri.host else "null")
-        sb.append("\r\n Path                      ").append(if (uri.path != null) uri.path else "null")
-        sb.append("\r\n LastPathSegment           ").append(if (uri.lastPathSegment != null) uri.lastPathSegment else "null")
-        sb.append("\r\n Query                     ").append(if (uri.query != null) uri.query else "null")
-        sb.append("\r\n Fragment                  ").append(if (uri.fragment != null) uri.fragment else "null")
+        sb.append("\r\n Uri                       $uri")
+        sb.append("\r\n Scheme                    ${uri.scheme}")
+        sb.append("\r\n Host                      ${uri.host}")
+        sb.append("\r\n Path                      ${uri.path}")
+        sb.append("\r\n LastPathSegment           ${uri.lastPathSegment}")
+        sb.append("\r\n Query                     ${uri.query}")
+        sb.append("\r\n Fragment                  ${uri.fragment}")
         return sb.toString()
     }
 
     private fun _DUMP(intent: Intent?): String {
         intent ?: return "null_Intent"
-        val sb = StringBuilder(intent.component?.className ?: intent.toUri(0))
         //@formatter:off
-        sb.append(if (intent.action     != null) (if (sb.isNotEmpty()) "\n" else "") + "Action     " + intent.action    .toString() else "")
-        sb.append(if (intent.data       != null) (if (sb.isNotEmpty()) "\n" else "") + "Data       " + intent.data      .toString() else "")
-        sb.append(if (intent.type       != null) (if (sb.isNotEmpty()) "\n" else "") + "Type       " + intent.type      .toString() else "")
-        sb.append(if (intent.scheme     != null) (if (sb.isNotEmpty()) "\n" else "") + "Scheme     " + intent.scheme    .toString() else "")
-        sb.append(if (intent.flags      != 0x00) (if (sb.isNotEmpty()) "\n" else "") + "Flags      " + Integer.toHexString(intent.flags) else "")
+        return (intent.component?.className ?: intent.toUri(0)) +
+            intent.action.ifNotBlank { "\nAction    $it" } +
+            intent.data  .ifNotBlank { "\nData      $it" } +
+            intent.type  .ifNotBlank { "\nType      $it" } +
+            intent.scheme.ifNotBlank { "\nScheme    $it" } +
+            intent.flags .ifNotBlank { "\nFlags     ${Integer.toHexString(it)}" } +
+            intent.extras.ifNotBlank { "\n${_DUMP(intent.extras)}" }
         //@formatter:on
-        if (intent.extras != null) sb.append((if (sb.isNotEmpty()) "\n" else "") + _DUMP(intent.extras))
-        return sb.toString()
     }
 
+    private inline fun <T> T?.ifNotBlank(transform: (T) -> String): String = if (this == null || (this as? CharSequence)?.isBlank() == true || (this as? Number) == 0x00) "" else transform(this)
+
     private fun _DUMP(th: Throwable?): String = th?.stackTraceToString() ?: "Throwable"
-
-    @JvmStatic
-    fun _toHexString(byteArray: ByteArray?): String =
-        byteArray?.joinToString("") { "%02x".format(it) } ?: "!!byte[]"
-
-    @JvmStatic
-    fun _toByteArray(hexString: String): ByteArray = hexString.zipWithNext { a, b -> "$a$b" }
-        .filterIndexed { index, _ -> index % 2 == 0 }
-        .map { it.toInt(16).toByte() }
-        .toByteArray()
 
     @JvmStatic
     fun _DUMP_object(o: Any?): String {
@@ -444,16 +383,10 @@ object Log {
             if (value.javaClass.isArray) {
                 //@formatter:off
                 sb.append(name).append('<').append(value.javaClass.simpleName).append('>').append(" = ")
-                val componentType = value.javaClass.componentType!!
+                val componentType = value.javaClass.componentType ?: return "null"
                 when {
-                    Boolean ::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(Arrays.toString(value as BooleanArray?))
-                    Byte    ::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(if ((value as ByteArray).size < MAX_LOG_LINE_BYTE_SIZE) String((value as ByteArray?)!!) else "[" + value.size + "]")
-                    Char    ::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(String((value as CharArray?)!!))
-                    Double  ::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(Arrays.toString(value as DoubleArray?))
-                    Float   ::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(Arrays.toString(value as FloatArray?))
-                    Int     ::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(Arrays.toString(value as IntArray?))
-                    Long    ::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(Arrays.toString(value as LongArray?))
-                    Short   ::class.javaPrimitiveType!!.isAssignableFrom(componentType) -> sb.append(Arrays.toString(value as ShortArray?))
+                    Byte::class.java.isAssignableFrom(componentType) -> sb.append(if ((value as ByteArray).size < MAX_LOG_LINE_BYTE_SIZE) String((value as ByteArray?)!!) else "[" + value.size + "]")
+                    Char::class.java.isAssignableFrom(componentType) -> sb.append(String((value as CharArray?)!!))
                     else -> sb.append((value as Array<*>).contentToString())
                 }
                 //@formatter:on
@@ -502,10 +435,11 @@ object Log {
     private var ticTimer = 0L
 
     @JvmStatic
-    fun tic_s() {
+    fun tic_s(vararg args: Any? = arrayOf("")) {
         if (!LOG) return
         synchronized(this) {
             ticTimer = System.currentTimeMillis()
+            e(String.format(Locale.getDefault(), "%,15d", 0), getMessage(*args))
         }
     }
 
@@ -521,96 +455,28 @@ object Log {
         }
     }
 
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //image save
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    @JvmStatic
-    fun compress(name: String, data: ByteArray) {
-        FILE_LOG ?: return
-        runCatching {
-            FILE_LOG!!.parentFile?.also {
-                it.mkdirs()
-                it.canWrite()
-                val f = File(it, timeText + "_" + name + ".jpg")
-                FileOutputStream(f).use { stream ->
-                    BitmapFactory.decodeByteArray(data, 0, data.size)
-                        .compress(CompressFormat.JPEG, 100, stream)
-                }
-            }
-        }
-    }
-
-    @JvmStatic
-    fun compress(name: String, bmp: Bitmap) {
-        FILE_LOG ?: return
-        runCatching {
-            FILE_LOG!!.parentFile?.also {
-                it.mkdirs()
-                it.canWrite()
-                val f = File(it, timeText + "_" + name + ".jpg")
-                FileOutputStream(f).use { stream ->
-                    bmp.compress(CompressFormat.JPEG, 100, stream)
-                }
-            }
-        }
-    }
-
-    private val timeText: String
-        get() = SimpleDateFormat(
-            "yyyyMMdd_HHmmss_SSS",
-            Locale.ENGLISH
-        ).format(Date())
-
     //flog
     @JvmStatic
     fun flog(vararg args: Any?) {
         FILE_LOG ?: return
         runCatching {
             val info = getStack()
-            val log: String = getMessage(*args)
-            val st = StringTokenizer(log, LF, false)
+            val lines = getMessage(*args).split(LF)
 
-            val tag =
-                "%-40s%-40d %-100s ``".format(Date().toString(), SystemClock.elapsedRealtime(), info.toString())
-            if (st.hasMoreTokens()) {
-                val token = st.nextToken()
+            val tag = "%-40s%-40d %-100s ``".format(Date().toString(), SystemClock.elapsedRealtime(), info.toString())
+
+            if (lines.isNotEmpty()) {
+                val token = lines.first()
                 FILE_LOG!!.appendText(tag + token + LF)
             }
 
             val space = "%-40s%-40s %-100s ``".format("", "", "")
-            while (st.hasMoreTokens()) {
-                val token = st.nextToken()
+            repeat(lines.size) { token ->
                 FILE_LOG!!.appendText(space + token + LF)
             }
         }
     }
 
-    fun measure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        if (!LOG) return
-        val widthMode = MeasureSpec.getMode(widthMeasureSpec)
-        val widthSize = MeasureSpec.getSize(widthMeasureSpec)
-        val heightMode = MeasureSpec.getMode(heightMeasureSpec)
-        val heightSize = MeasureSpec.getSize(heightMeasureSpec)
-        d(String.format("0x%08x,0x%08x", widthMode, heightMode))
-        d(String.format("%10d,%10d", widthSize, heightSize))
-    }
-
-    private var LAST_ACTION_MOVE: Long = 0
-
-    @JvmStatic
-    fun onTouchEvent(event: MotionEvent) {
-        if (!LOG) return
-        runCatching {
-            val action = event.action and MotionEvent.ACTION_MASK
-            if (action == MotionEvent.ACTION_MOVE) {
-                val nanoTime = System.nanoTime()
-                if (nanoTime - LAST_ACTION_MOVE < 1000000) return
-                LAST_ACTION_MOVE = nanoTime
-            }
-            e(event)
-        }
-    }
 
     //xml
     @JvmStatic
@@ -629,8 +495,6 @@ object Log {
         }
         return result.writer.toString()
     }
-
-    class TraceLog : Throwable()
 
     @VisibleForTesting
     @JvmStatic
@@ -656,12 +520,19 @@ object Log {
         }
     }
 
+    @JvmOverloads
+    @JvmStatic
+    fun printStackTrace(th: Throwable = Throwable()) {
+        if (!LOG) return
+        w(android.util.Log.getStackTraceString(th))
+    }
+
     /////////////////////////////////////////////////////////////////////////////
     //over lap func
     @JvmStatic
-    fun println(priority: Int, tag: String?, msg: String?): Int {
+    fun println(priority: Int, vararg args: Any?): Int {
         if (!LOG) return 0
-        return p(priority, tag, msg)
+        return p(priority, *args)
     }
 
     @JvmStatic
@@ -701,16 +572,14 @@ object Log {
         return p(VERBOSE, *args)
     }
 
+    //What a Terrible Failure
     @JvmStatic
-    fun printStackTrace() {
-        if (!LOG) return
-        TraceLog().printStackTrace()
-    }
+    fun wtf(vararg args: Any?): Int {
+        if (!LOG) return 0
 
-    @JvmStatic
-    fun printStackTrace(th: Throwable) {
-        if (!LOG) return
-        th.printStackTrace()
+        p(ASSERT, *args)
+        w(android.util.Log.getStackTraceString(Throwable()))
+        throw Throwable()
     }
 
     @JvmStatic
@@ -718,8 +587,85 @@ object Log {
         if (!LOG) return ""
         return android.util.Log.getStackTraceString(th)
     }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // etc 없어질것
+    ///////////////////////////////////////////////////////////////////////////
+    @JvmStatic
+    fun viewTree(parent: View, depth: Int = 0) {
+        if (!LOG) return
+
+        if (parent !is ViewGroup) {
+            pn(ERROR, depth + 2, _DUMP(parent, 0))
+            return
+        }
+
+        parent.children.forEach { child ->
+            pn(ERROR, depth + 2, _DUMP(child, depth + 1))
+            if (child is ViewGroup) {
+                viewTree(child, depth + 1)
+            }
+        }
+    }
+
+    private fun _DUMP(v: View, depth: Int = 0): String {
+        val space = "                    "
+        val out = StringBuilder(128)
+        out.append(space)
+        when (v) {
+            is WebView -> out.insert(depth, "W:" + Integer.toHexString(System.identityHashCode(v)) + ":" + v.title)
+            is TextView -> out.insert(depth, "T:" + Integer.toHexString(System.identityHashCode(v)) + ":" + v.text)
+            else -> out.insert(
+                depth,
+                "N:" + Integer.toHexString(System.identityHashCode(v)) + ":" + v.javaClass.simpleName
+            )
+        }
+        out.setLength(space.length)
+        val id = v.id
+        val r = v.resources
+        if (id != View.NO_ID && id ushr 24 != 0 && r != null) {
+            val pkgname: String = when (id and -0x1000000) {
+                0x7f000000 -> "app"
+                0x01000000 -> "android"
+                else -> r.getResourcePackageName(id)
+            }
+            val typename = r.getResourceTypeName(id)
+            val entryname = r.getResourceEntryName(id)
+            out.append(" $pkgname:$typename/$entryname")
+        }
+        return out.toString()
+    }
+
+    fun measure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        if (!LOG) return
+        val widthMode = MeasureSpec.getMode(widthMeasureSpec)
+        val widthSize = MeasureSpec.getSize(widthMeasureSpec)
+        val heightMode = MeasureSpec.getMode(heightMeasureSpec)
+        val heightSize = MeasureSpec.getSize(heightMeasureSpec)
+        d(String.format("0x%08x,0x%08x", widthMode, heightMode))
+        d(String.format("%10d,%10d", widthSize, heightSize))
+    }
+
+    private var LAST_ACTION_MOVE: Long = 0
+
+    @JvmStatic
+    fun onTouchEvent(event: MotionEvent) {
+        if (!LOG) return
+        runCatching {
+            val action = event.action and MotionEvent.ACTION_MASK
+            if (action == MotionEvent.ACTION_MOVE) {
+                val nanoTime = System.nanoTime()
+                if (nanoTime - LAST_ACTION_MOVE < 1000000) return
+                LAST_ACTION_MOVE = nanoTime
+            }
+            e(event)
+        }
+    }
 }
 
+///////////////////////////////////////////////////////////////////////////
+// Log tools
+///////////////////////////////////////////////////////////////////////////
 private val String?.singleLog: String
     get() = this?.toByteArray()
         ?.take(3500)
@@ -801,18 +747,17 @@ internal fun ByteArray.takeSafe(lengthByte: Int, startOffset: Int): String {
     val charByteMoveCount = offset + lengthByte - position
     val charByteLength = get(position).inv().countLeadingZeroBits()
 
+    //char 끝이면 거기까지 else char 중간이면 뒤에버림
     return if (charByteLength == charByteMoveCount)
-    //char 끝이면 거기까지
         String(this, offset, lengthByte)
     else
-    //char 중간이면 뒤에버림
         String(this, offset, position - offset)
 }
 
 internal fun String.takeSafe(lengthByte: Int, startOffset: Int = 0) = toByteArray().takeSafe(lengthByte, startOffset)
 
 ///////////////////////////////////////////////////////////////////////////
-// Log Ktx
+// Log dump
 ///////////////////////////////////////////////////////////////////////////
 private val stack: StackTraceElement
     get() = Exception().stackTrace.run {
@@ -823,52 +768,111 @@ private val stack: StackTraceElement
         }.firstOrNull() ?: first()
     }
 
-fun Lifecycle._DUMP() = addObserver(object : LifecycleEventObserver {
+fun Lifecycle._DUMP(): Unit = addObserver(object : LifecycleEventObserver {
     override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
-        Log.ps(Log.ERROR, stack, "LifecycleChanged", source.javaClass.simpleName, event)
+        Log.ps(Log.INFO, stack, "LifecycleChanged", source.javaClass.simpleName, event)
     }
 })
 
-fun Activity._DUMP() = intent.extras?._DUMP()
-
-fun Fragment._DUMP() = arguments?._DUMP()
-
-fun SavedStateHandle._DUMP() {
-    Log.ps(Log.ERROR, stack, "=".repeat(50))
-    keys().map {
-        it to get<Any>(it)
-    }.forEach { (key, value) ->
-        Log.ps(Log.WARN, stack, key, value, value?.javaClass?.simpleName)
-    }
-    Log.w("=".repeat(50))
+fun Activity._DUMP(): Unit = sbc {
+    Log.i(intent.dataString)
+    intent.extras?.toLog()
 }
 
-fun Bundle._DUMP() {
-    Log.ps(Log.ERROR, stack, "=".repeat(50))
-    keySet().map {
-        it to get(it)
-    }.forEach { (key, value) ->
-        Log.ps(Log.WARN, stack, key, value, value?.javaClass?.simpleName)
-    }
-    Log.w("=".repeat(50))
-}
+fun Fragment._DUMP(): Unit = sbc { arguments?.toLog() }
 
-fun Cursor?._DUMP(count: Int = 100) {
-    Log.ps(Log.ERROR, stack, "=".repeat(50))
-    val c = this ?: return
-    Log.ps(Log.WARN, stack, "<${c.count}>")
-    Log.ps(Log.INFO, stack, " " + c.columnNames.contentToString())
+fun Intent?._DUMP(): Unit = sbc { this?.extras?.toLog() }
+
+fun Bundle?._DUMP(): Unit = sbc { toLog() }
+
+fun SavedStateHandle._DUMP(): Unit = sbc { keys().map { it to get<Any>(it) }.toLog() }
+
+@Suppress("DEPRECATION")
+private fun Bundle?.toLog(): Unit? = this?.keySet()?.map { it to get(it) }?.toLog()
+
+private fun List<Pair<*, *>>?.toLog(): Unit? = this
+    ?.sortedBy {
+        it.first.toString()
+    }
+    ?.forEach { (k, v) ->
+        val log = if (v?.javaClass?.isArray == true)
+            "$k:${v.javaClass.simpleName}=${(v as Array<*>).contentToString()}"
+        else
+            "$k:${v?.javaClass?.simpleName}=$v"
+        Log.i(log)
+    }
+
+///////////////////////////////////////////////////////////////////////////
+// db
+///////////////////////////////////////////////////////////////////////////
+
+fun Cursor?._DUMP(limit: Int = Int.MAX_VALUE): Unit = sbc {
+    val c = this ?: return@sbc
+    Log.i("<${c.count}>")
+    Log.i(c.columnNames.contentToString())
 
     val dat = arrayOfNulls<String>(c.columnCount)
-    val keep = c.position
-    if (keep >= 0) {
-        repeat(c.columnCount) { dat[it] = if (c.getType(it) == Cursor.FIELD_TYPE_BLOB) "BLOB" else c.getString(it) }
-        Log.ps(Log.INFO, stack, " " + dat.contentToString())
+    if (!c.isBeforeFirst) {
+        for (i in 0 until c.columnCount)
+            dat[i] = if (c.getType(i) == Cursor.FIELD_TYPE_BLOB) "BLOB" else c.getString(i)
+        Log.i(dat.contentToString())
+    } else {
+        val keep = c.position
+        while (c.moveToNext() && c.position <= limit) {
+            for (i in 0 until c.columnCount)
+                dat[i] = if (c.getType(i) == Cursor.FIELD_TYPE_BLOB) "BLOB" else c.getString(i)
+            Log.i(dat.contentToString())
+        }
+        c.moveToPosition(keep)
     }
-    while (c.moveToNext() && c.position < keep + count) {
-        repeat(c.columnCount) { dat[it] = if (c.getType(it) == Cursor.FIELD_TYPE_BLOB) "BLOB" else c.getString(it) }
-        Log.ps(Log.INFO, stack, " " + dat.contentToString())
+}
+
+///////////////////////////////////////////////////////////////////////////
+// image
+///////////////////////////////////////////////////////////////////////////
+fun ByteArray._DUMP(name: String = "bytes") {
+    val logDir = Log.FILE_LOG?.parentFile ?: return
+    logDir.mkdirs()
+    logDir.canWrite()
+
+    File(logDir, "${name}_$timeText.jpg").writeBytes(this)
+}
+
+fun Bitmap._DUMP(name: String = "bitmap") {
+    val logDir = Log.FILE_LOG?.parentFile ?: return
+    logDir.mkdirs()
+    logDir.canWrite()
+
+    runCatching {
+        val f = File(logDir, "${name}_$timeText.jpg")
+        FileOutputStream(f).use { stream ->
+            this.compress(CompressFormat.JPEG, 100, stream)
+        }
     }
-    c.moveToPosition(keep)
+}
+
+///////////////////////////////////////////////////////////////////////////
+// internal util
+///////////////////////////////////////////////////////////////////////////
+private val timeText: String
+    get() = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.ENGLISH).format(Date())
+
+fun sbc(block: () -> Unit) {
+    Log.ps(Log.VERBOSE, stack, "=".repeat(50))
+    block()
     Log.w("=".repeat(50))
 }
+
+///////////////////////////////////////////////////////////////////////////
+// hex util
+///////////////////////////////////////////////////////////////////////////
+fun ByteArray?._toHex(): String = this
+    ?.joinToString("") { "%02x".format(it) }
+    ?: "!!byte[]"
+
+fun String?._toByteArray(): ByteArray = this
+    ?.zipWithNext { a, b -> "$a$b" }
+    ?.filterIndexed { index, _ -> index % 2 == 0 }
+    ?.map { it.toInt(16).toByte() }
+    ?.toByteArray()
+    ?: ByteArray(0)
