@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
-@file:Suppress("FunctionName", "unused", "UNUSED_PARAMETER", "UnusedReceiverParameter")
+@file:Suppress("FunctionName", "unused", "MemberVisibilityCanBePrivate", "UNUSED_PARAMETER")
 
 package android.log
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.database.Cursor
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
-import android.view.MotionEvent
-import android.view.View
+import androidx.activity.result.ActivityResult
+import androidx.annotation.VisibleForTesting
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.SavedStateHandle
@@ -107,7 +108,7 @@ object Log {
     fun getClzMethod(stack: StackTraceElement): String = ""
 
     @JvmStatic
-    fun getStackFilter(filterClassNameRegex: String? = null): StackTraceElement = Exception().stackTrace.first()
+    fun getStack(filterNot: Regex): StackTraceElement = StackTraceElement("", "", "", 0)
 
     @JvmStatic
     fun pm(priority: Int, method: String, vararg args: Any?): Int = 0
@@ -125,23 +126,12 @@ object Log {
     fun ps(priority: Int, stack: StackTraceElement, vararg args: Any?): Int = 0
 
     @JvmStatic
-    fun pml(priority: Int, tag: String, locator: String, vararg args: Any?): Int = 0
+    fun pml(priority: Int, methodName: String, locator: String, vararg args: Any?): Int = 0
 
-    @JvmStatic
     fun debounce(vararg args: Any?) = Unit
 
     @JvmStatic
-    fun viewTree(parent: View, depth: Int = 0) = Unit
-
-    @JvmStatic
     fun clz(clz: Class<*>) = Unit
-
-    /** dump */
-    @JvmStatic
-    fun _toHexString(byteArray: ByteArray?): String = ""
-
-    @JvmStatic
-    fun _toByteArray(hexString: String): ByteArray = "".toByteArray()
 
     @JvmStatic
     fun _DUMP_object(o: Any?): String = ""
@@ -149,42 +139,32 @@ object Log {
     fun provider(context: Context, uri: Uri?) = Unit
 
     @JvmStatic
-    fun tic_s() = Unit
+    fun tic_s(vararg args: Any? = arrayOf("")) = Unit
 
     @JvmStatic
     fun tic(vararg args: Any? = arrayOf("")) = Unit
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //image save
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    @JvmStatic
-    fun compress(name: String, data: ByteArray) = Unit
-
-    @JvmStatic
-    fun compress(name: String, bmp: Bitmap) = Unit
 
     //flog
     @JvmStatic
     fun flog(vararg args: Any?) = Unit
 
-    fun measure(widthMeasureSpec: Int, heightMeasureSpec: Int) = Unit
-
-    @JvmStatic
-    fun onTouchEvent(event: MotionEvent) = Unit
 
     //xml
     @JvmStatic
     fun prettyXml(xml: String): String = ""
 
-    class TraceLog : Throwable()
-
+    @VisibleForTesting
     @JvmStatic
     fun println(vararg args: Any?) = Unit
+
+    @JvmOverloads
+    @JvmStatic
+    fun printStackTrace(th: Throwable = Throwable()) = Unit
 
     /////////////////////////////////////////////////////////////////////////////
     //over lap func
     @JvmStatic
-    fun println(priority: Int, tag: String?, msg: String?): Int = 0
+    fun println(priority: Int, vararg args: Any?): Int = 0
 
     @JvmStatic
     fun a(vararg args: Any?): Int = 0
@@ -204,21 +184,26 @@ object Log {
     @JvmStatic
     fun v(vararg args: Any?): Int = 0
 
+    //What a Terrible Failure
     @JvmStatic
-    fun printStackTrace() = Unit
-
-    @JvmStatic
-    fun printStackTrace(th: Throwable) = Unit
+    fun wtf(vararg args: Any?): Int = 0
 
     @JvmStatic
     fun getStackTraceString(th: Throwable): String = ""
+
+    ///////////////////////////////////////////////////////////////////////////
+    // etc 없어질것
+    ///////////////////////////////////////////////////////////////////////////
 }
 
+private val String?.singleLog: String
+    get() = ""
 
-val Boolean?.IW: Int get() = if (this == true) android.util.Log.INFO else android.util.Log.WARN
-fun String.takeLastPadStartSafeWidth(length: Int = Log.TAG_WIDTH): String = ""
+val Boolean?.IW: Int get() = android.util.Log.INFO
 
-fun String.takePadEndSafeWidth(length: Int = Log.TAG_WIDTH): String = ""
+///////////////////////////////////////////////////////////////////////////
+// Log Ktx
+///////////////////////////////////////////////////////////////////////////
 
 fun Lifecycle._DUMP() = Unit
 
@@ -226,8 +211,33 @@ fun Activity._DUMP() = Unit
 
 fun Fragment._DUMP() = Unit
 
+fun Intent?._DUMP() = Unit
+fun ActivityResult._DUMP() = Unit
+fun Bundle?._DUMP() = Unit
 fun SavedStateHandle._DUMP() = Unit
 
-fun Bundle._DUMP() = Unit
+///////////////////////////////////////////////////////////////////////////
+// db
+///////////////////////////////////////////////////////////////////////////
 
-fun Cursor?._DUMP(count: Int = 100) = Unit
+fun Cursor?._DUMP(limit: Int = Int.MAX_VALUE) = Unit
+
+///////////////////////////////////////////////////////////////////////////
+// image
+///////////////////////////////////////////////////////////////////////////
+fun ByteArray._DUMP(name: String = "bytes") = Unit
+
+fun Bitmap._DUMP(name: String = "bitmap") = Unit
+
+///////////////////////////////////////////////////////////////////////////
+// internal util
+///////////////////////////////////////////////////////////////////////////
+
+fun sbc(block: () -> Unit) = Unit
+
+///////////////////////////////////////////////////////////////////////////
+// hex util
+///////////////////////////////////////////////////////////////////////////
+fun ByteArray?._toHex(): String = ""
+
+fun String?._toByteArray(): ByteArray = ByteArray(0)

@@ -36,6 +36,7 @@ import android.view.View.MeasureSpec
 import android.view.ViewGroup
 import android.webkit.WebView
 import android.widget.TextView
+import androidx.activity.result.ActivityResult
 import androidx.annotation.VisibleForTesting
 import androidx.core.view.children
 import androidx.fragment.app.Fragment
@@ -112,7 +113,7 @@ object Log {
     var logFilterClassNameRegex: Regex = "".toRegex()
 
     @JvmField
-    var logFilterPredicate: (StackTraceElement) -> Boolean = { false }
+    var filterNotPredicate: (StackTraceElement) -> Boolean = { false }
 
     @JvmField
     var getTag: (methodName: String?, locator: String) -> String = { methodName, locator ->
@@ -142,36 +143,56 @@ object Log {
     @JvmStatic
     fun getClzMethod(stack: StackTraceElement): String = runCatching { getClzName(stack) + "::" + getMethodName(stack) }.getOrDefault(stack.className)
 
+    //외부에서 직접 지정할때 사용
+    @JvmStatic
+    fun getStack(filterNot: Regex): StackTraceElement {
+        val stackTraceElement = Throwable().stackTrace
+            .filterNot { it.className == this.javaClass.name }
+
+        return stackTraceElement
+            .asSequence()
+            .filterNot { it.className.matches(filterNot) }
+            .filterNot { it.lineNumber < 0 }
+            .firstOrNull()
+            ?: stackTraceElement.first()
+    }
+
     private fun getStack(): StackTraceElement {
-        return Exception().stackTrace.filterNot {
-            it.className == javaClass.name
-        }.run {
-            asSequence().filterNot {
-                it.className.matches(defaultLogFilterClassNameRegex)
-            }.filterNot {
-                it.className.matches(logFilterClassNameRegex)
-            }.filterNot(logFilterPredicate).filterNot {
-                it.lineNumber < 0
-            }.firstOrNull() ?: first()
-        }
+        val stackTraceElement = Throwable().stackTrace
+            .filterNot { it.className == this.javaClass.name }
+
+        return stackTraceElement
+            .asSequence()
+            .filterNot { it.className.matches(defaultLogFilterClassNameRegex) }
+            .filterNot { it.className.matches(logFilterClassNameRegex) }
+            .filterNot(filterNotPredicate)
+            .filterNot { it.lineNumber < 0 }
+            .firstOrNull()
+            ?: stackTraceElement.first()
     }
 
-    private fun getStackMethod(methodNameKey: String): StackTraceElement {
-        return Exception().stackTrace.filterNot {
-            it.className == javaClass.name
-        }.run {
-            filterNot(logFilterPredicate)
-                .lastOrNull { it.methodName == methodNameKey } ?: last()
-        }
+    //methodName을 호출한 caller를 찾는다
+    private fun getStackMethod(methodName: String): StackTraceElement {
+        val stackTraceElement = Throwable().stackTrace
+            .filterNot { it.className == this.javaClass.name }
+
+        return stackTraceElement
+            .filterNot(filterNotPredicate)
+            .lastOrNull { it.methodName == methodName }
+            ?: stackTraceElement.last()
     }
 
-    private fun getStackCaller(methodNameKey: String): StackTraceElement {
-        return Exception().stackTrace.filterNot {
-            it.className == javaClass.name
-        }.run {
-            filterNot(logFilterPredicate)
-                .getOrNull(indexOfLast { it.methodName == methodNameKey } + 1) ?: last()
-        }
+    //methodName을 호출한 caller를 찾는다
+    private fun getStackCaller(methodName: String): StackTraceElement {
+        val stackTraceElement = Throwable().stackTrace
+            .filterNot { it.className == this.javaClass.name }
+
+        val methodIndex = stackTraceElement.indexOfLast { it.methodName == methodName }
+
+        return stackTraceElement
+            .getOrElse(methodIndex + 1) {
+                stackTraceElement.last()
+            }
     }
 
 
@@ -319,21 +340,6 @@ object Log {
         "$modifiers ${returnType.simpleName.padEnd(20).take(20)}${declaringClass.simpleName}.$name(${parameterTypes.joinToString { it.simpleName }})"
     }
 
-
-    @Suppress("DEPRECATION")
-    private fun _DUMP(bundle: Bundle?): String {
-        val b = bundle ?: return ""
-        return b.keySet().sorted()
-            .joinToString("\n") { k ->
-                val v = b.get(k)
-                if (v?.javaClass?.isArray == true)
-                    "$k:${v.javaClass.simpleName}=${(v as Array<*>).contentToString()}"
-                else
-                    "$k:${v?.javaClass?.simpleName}=$v"
-            }
-
-    }
-
     private fun _DUMP(cls: Class<*>?): String {
         return cls?.simpleName ?: "null_Class<?>"
     }
@@ -352,7 +358,7 @@ object Log {
         return sb.toString()
     }
 
-    private fun _DUMP(intent: Intent?): String {
+    internal fun _DUMP(intent: Intent?): String {
         intent ?: return "null_Intent"
         //@formatter:off
         return (intent.component?.className ?: intent.toUri(0)) +
@@ -361,8 +367,21 @@ object Log {
             intent.type  .ifNotBlank { "\nType      $it" } +
             intent.scheme.ifNotBlank { "\nScheme    $it" } +
             intent.flags .ifNotBlank { "\nFlags     ${Integer.toHexString(it)}" } +
-            intent.extras.ifNotBlank { "\n${_DUMP(intent.extras)}" }
+            intent.extras.ifNotBlank { "\nextra\n${_DUMP(intent.extras)}" }
         //@formatter:on
+    }
+
+    @Suppress("DEPRECATION")
+    internal fun _DUMP(bundle: Bundle?): String {
+        val b = bundle ?: return "null_Bundle"
+        return b.keySet().sorted()
+            .joinToString("\n") { k ->
+                val v = b.get(k)
+                if (v?.javaClass?.isArray == true)
+                    "$k:${v.javaClass.simpleName}=${(v as Array<*>).contentToString()}"
+                else
+                    "$k:${v?.javaClass?.simpleName}=$v"
+            }
     }
 
     private inline fun <T> T?.ifNotBlank(transform: (T) -> String): String = if (this == null || (this as? CharSequence)?.isBlank() == true || (this as? Number) == 0x00) "" else transform(this)
@@ -663,9 +682,6 @@ object Log {
     }
 }
 
-///////////////////////////////////////////////////////////////////////////
-// Log tools
-///////////////////////////////////////////////////////////////////////////
 private val String?.singleLog: String
     get() = this?.toByteArray()
         ?.take(3500)
@@ -747,17 +763,18 @@ internal fun ByteArray.takeSafe(lengthByte: Int, startOffset: Int): String {
     val charByteMoveCount = offset + lengthByte - position
     val charByteLength = get(position).inv().countLeadingZeroBits()
 
-    //char 끝이면 거기까지 else char 중간이면 뒤에버림
     return if (charByteLength == charByteMoveCount)
+    //char 끝이면 거기까지
         String(this, offset, lengthByte)
     else
+    //char 중간이면 뒤에버림
         String(this, offset, position - offset)
 }
 
 internal fun String.takeSafe(lengthByte: Int, startOffset: Int = 0) = toByteArray().takeSafe(lengthByte, startOffset)
 
 ///////////////////////////////////////////////////////////////////////////
-// Log dump
+// Log Ktx
 ///////////////////////////////////////////////////////////////////////////
 private val stack: StackTraceElement
     get() = Exception().stackTrace.run {
@@ -775,32 +792,39 @@ fun Lifecycle._DUMP(): Unit = addObserver(object : LifecycleEventObserver {
 })
 
 fun Activity._DUMP(): Unit = sbc {
-    Log.i(intent.dataString)
-    intent.extras?.toLog()
+    Log.i(intent)
 }
 
-fun Fragment._DUMP(): Unit = sbc { arguments?.toLog() }
+fun Fragment._DUMP(): Unit = sbc {
+    Log.i(arguments)
+}
 
-fun Intent?._DUMP(): Unit = sbc { this?.extras?.toLog() }
+fun Intent?._DUMP(): Unit = sbc {
+    Log.i(this)
+}
 
-fun Bundle?._DUMP(): Unit = sbc { toLog() }
+fun ActivityResult._DUMP(): Unit = sbc {
+    Log.i(this.resultCode)
+    Log.i(this.data)
+}
 
-fun SavedStateHandle._DUMP(): Unit = sbc { keys().map { it to get<Any>(it) }.toLog() }
+fun Bundle?._DUMP(): Unit = sbc {
+    Log.i(this)
+}
 
-@Suppress("DEPRECATION")
-private fun Bundle?.toLog(): Unit? = this?.keySet()?.map { it to get(it) }?.toLog()
-
-private fun List<Pair<*, *>>?.toLog(): Unit? = this
-    ?.sortedBy {
-        it.first.toString()
-    }
-    ?.forEach { (k, v) ->
-        val log = if (v?.javaClass?.isArray == true)
-            "$k:${v.javaClass.simpleName}=${(v as Array<*>).contentToString()}"
-        else
-            "$k:${v?.javaClass?.simpleName}=$v"
-        Log.i(log)
-    }
+fun SavedStateHandle._DUMP(): Unit = sbc {
+    keys()
+        .sorted()
+        .forEach {
+            val k = it
+            val v = get<Any>(it)
+            val log = if (v?.javaClass?.isArray == true)
+                "$k:${v.javaClass.simpleName}=${(v as Array<*>).contentToString()}"
+            else
+                "$k:${v?.javaClass?.simpleName}=$v"
+            Log.i(log)
+        }
+}
 
 ///////////////////////////////////////////////////////////////////////////
 // db
