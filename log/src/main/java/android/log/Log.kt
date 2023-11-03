@@ -344,7 +344,7 @@ object Log {
         return cls?.simpleName ?: "null_Class<?>"
     }
 
-    private fun _DUMP(uri: Uri?): String {
+    fun _DUMP(uri: Uri?): String {
         uri ?: return "null_Uri"
         //		return uri.toString();
         val sb = StringBuilder()
@@ -358,7 +358,7 @@ object Log {
         return sb.toString()
     }
 
-    internal fun _DUMP(intent: Intent?): String {
+    fun _DUMP(intent: Intent?): String {
         intent ?: return "null_Intent"
         //@formatter:off
         return (intent.component?.className ?: intent.toUri(0)) +
@@ -372,7 +372,7 @@ object Log {
     }
 
     @Suppress("DEPRECATION")
-    internal fun _DUMP(bundle: Bundle?): String {
+    fun _DUMP(bundle: Bundle?): String {
         val b = bundle ?: return "null_Bundle"
         return b.keySet().sorted()
             .joinToString("\n") { k ->
