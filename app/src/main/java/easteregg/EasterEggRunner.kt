@@ -44,7 +44,7 @@ class EasterEggRunner(
                 if (locationInWindow[1] == 0) y = systemWindowInsetTop.toFloat()
             }
 
-            text = dev.eastar.log.demo.BuildConfig.BUILD_TIME
+            //text = dev.eastar.log.demo.BuildConfig.BUILD_TIME
             @SuppressLint("SetTextI18n")
             tag = EASTER_EGG_VIEW_TAG
             setTextColor(0xffff0000.toInt())

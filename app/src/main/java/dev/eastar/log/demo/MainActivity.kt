@@ -7,8 +7,9 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.activity.ComponentActivity
 
-class MainActivity : LogActivity() {
+class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -35,9 +36,9 @@ class MainActivity : LogActivity() {
                 text = "Migration log with classname filter"
                 setOnClickListener {
                     //way 1
-                    Log.logFilterClassNameRegex = "${LoggerMigration::class.java.name}".toRegex()
+                    Log.NOT_REGEX = "${LoggerMigration::class.java.name}".toRegex()
                     //way 2
-                    Log.logFilterPredicate = {
+                    Log.NOT_PREDICATE = {
 //                        check
 //                        android.util.Log.e("~", it.className)
 //                        android.util.Log.e("~", it.fileName)

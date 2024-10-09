@@ -10,7 +10,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.log.Log
 import android.widget.SimpleAdapter
-import androidx.appcompat.app.AppCompatActivity
 
 fun Application.easterEgg() = easterEgg(EasterEgg::class)
 
@@ -21,9 +20,9 @@ class EasterEgg(private val activity: Activity) {
     fun func2() {
     }
 
-    fun AppCompatActivity.func3() {
-        throw Exception("test")
-    }
+    //fun AppCompatActivity.func3() {
+    //    throw Exception("test")
+    //}
 
     fun Activity.allActivity(context: Context) {
         val items = packageManager

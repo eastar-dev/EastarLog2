@@ -9,8 +9,6 @@ import easteregg.easterEgg
 class AppApplication : Application() {
     override fun attachBaseContext(base: Context?) {
         super.attachBaseContext(base)
-        Log.logFilterClassNameRegex = "dev\\.eastar\\.log\\.demo\\.BActivity".toRegex()
-        logLifeCycle()
-        easterEgg()
+        Log.NOT_REGEX = "dev.eastar.log.demo.BActivity".toRegex()
     }
 }
