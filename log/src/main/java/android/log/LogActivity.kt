@@ -6,12 +6,13 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.content.res.Configuration
 import android.os.Bundle
+import androidx.activity.ComponentActivity
 import androidx.annotation.CallSuper
 import androidx.annotation.ContentView
 import androidx.fragment.app.FragmentActivity
 import java.util.concurrent.Executor
 
-abstract class LogActivity : FragmentActivity {
+abstract class LogActivity : ComponentActivity {
 
     constructor() : super()
 
