@@ -20,15 +20,12 @@ class BActivity : ComponentActivity() {
             setOnClickListener { launcher.launch(Intent(context, CActivity::class.java)) }
         })
 
-
-        val callback = object : OnBackPressedCallback(true) {
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 setResult(RESULT_OK, intent.apply { putExtra("from", "BActivity") })
+                finish()
             }
-        }
-
-        // OnBackPressedDispatcher에 콜백 등록
-        onBackPressedDispatcher.addCallback(this, callback)
+        })
     }
 
 }

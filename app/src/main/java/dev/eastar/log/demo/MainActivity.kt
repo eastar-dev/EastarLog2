@@ -2,14 +2,25 @@ package dev.eastar.log.demo
 
 import android.content.Intent
 import android.log.Log
-import android.log.LogActivity
 import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.ComponentActivity
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 
 class MainActivity : ComponentActivity() {
+
+    // Define ActivityResultLauncher to start BActivity and handle the result
+    private val startBActivityLauncher: ActivityResultLauncher<Intent> =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                val fromActivity = result.data?.getStringExtra("from") ?: "Unknown"
+                Log.i("ActivityResult", "Returned from $fromActivity")
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -18,7 +29,10 @@ class MainActivity : ComponentActivity() {
             TextView(context).apply {
                 text = "1"
                 textSize = 100.sp
-                setOnClickListener { startActivityForResult(Intent(context, BActivity::class.java), 1) }
+                setOnClickListener {
+                    // Use the launcher to start BActivity instead of startActivityForResult
+                    startBActivityLauncher.launch(Intent(context, BActivity::class.java))
+                }
             }.also { addView(it) }
             Button(context).apply {
                 text = "Log Test"
@@ -39,10 +53,7 @@ class MainActivity : ComponentActivity() {
                     Log.NOT_REGEX = "${LoggerMigration::class.java.name}".toRegex()
                     //way 2
                     Log.NOT_PREDICATE = {
-//                        check
-//                        android.util.Log.e("~", it.className)
-//                        android.util.Log.e("~", it.fileName)
-//                        android.util.Log.e("~", it.methodName)
+                        // Custom logging filter
                         false
                     }
                     LoggerMigration.e("%s %d", "test", 200)
@@ -52,11 +63,6 @@ class MainActivity : ComponentActivity() {
 
         logTest()
     }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-    }
-
 
     private fun logTest() {
         getMaxLogLength_when_tag1Byte()
@@ -117,5 +123,4 @@ class MainActivity : ComponentActivity() {
             //log 4064
         }
     }
-
 }
