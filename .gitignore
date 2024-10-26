@@ -10,3 +10,4 @@ build/
 *.apk
 /functions/node_modules/
 local.properties
+.kotlin

@@ -19,13 +19,13 @@
 package android.log
 
 import android.app.Activity
+import android.app.Instrumentation
 import android.content.Context
 import android.content.Intent
 import android.database.Cursor
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
-import androidx.activity.result.ActivityResult
 import androidx.annotation.VisibleForTesting
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
@@ -212,7 +212,7 @@ fun Activity._DUMP() = Unit
 fun Fragment._DUMP() = Unit
 
 fun Intent?._DUMP() = Unit
-fun ActivityResult._DUMP() = Unit
+fun Instrumentation.ActivityResult._DUMP() = Unit
 fun Bundle?._DUMP() = Unit
 fun SavedStateHandle._DUMP() = Unit
 

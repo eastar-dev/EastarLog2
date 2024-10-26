@@ -29,7 +29,9 @@ android {
 }
 
 dependencies {
-    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.core)
+    implementation(libs.androidx.lifecycle.viewmodel.savedstate)
+    implementation(libs.androidx.fragment)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
