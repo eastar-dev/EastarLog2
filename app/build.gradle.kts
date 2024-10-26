@@ -3,17 +3,14 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    //maven
-    //id("maven-publish")
-
 }
 
 android {
-    namespace = "com.naver.eastar.log"
+    namespace = "dev.eastar.log.demo"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.naver.eastar.log"
+        applicationId = "dev.eastar.log.demo"
         minSdk = 26
         targetSdk = 34
         versionCode = 1

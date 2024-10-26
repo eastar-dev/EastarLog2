@@ -1,19 +1,18 @@
 import com.vanniktech.maven.publish.SonatypeHost
 
 plugins {
-    id("com.android.library")
-    id("org.jetbrains.kotlin.android")
-    id("maven-publish")
-    id("com.vanniktech.maven.publish") version "0.28.0"
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
+    alias(libs.plugins.vanniktech.maven)
 }
 
 android {
-    compileSdk = 34
+    compileSdk = libs.versions.compileSdk.get().toInt()
 
     namespace = "dev.eastar.log"
     defaultConfig {
-        minSdk = 26
-        version = "2.4.5"
+        minSdk = libs.versions.minSdk.get().toInt()
+        version = libs.versions.version.get()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     compileOptions {
@@ -73,22 +72,31 @@ afterEvaluate {
 /**
  * Maven Central
  *
- * id("com.vanniktech.maven.publish") version "0.28.0"
+ * id("com.vanniktech.maven.publish") version "0.30.0"
  *
  * import com.vanniktech.maven.publish.SonatypeHost
  */
 
 mavenPublishing {
+    // 기본 Maven Central로 배포
+    //publishToMavenCentral(SonatypeHost.DEFAULT)
+
+    // 또는 https://s01.oss.sonatype.org로 배포
+    //publishToMavenCentral(SonatypeHost.S01)
+
+    // 또는 https://central.sonatype.com/를 사용하는 Central Portal로 배포
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+
+    // 모든 배포에 대해 GPG 서명 활성화
     signAllPublications()
 
-    coordinates("dev.eastar", "eastarlog2", "2.5.0")
+    coordinates("dev.eastar", "log", libs.versions.version.get())
 
     pom {
         //프로젝트 이름, 설명, URL
-        name.set("EastarLog2")
-        description.set("Simple Setting Log lib for Android.")
-        inceptionYear.set("2017")
+        name.set("EastarLog2")// 라이브러리 이름
+        description.set("Simple Setting Log lib for Android.")// 라이브러리 설명
+        inceptionYear.set("2017") // 프로젝트 시작 연도
         url.set("https://github.com/eastar-dev/EastarLog2")
         licenses {
             license {
@@ -99,9 +107,9 @@ mavenPublishing {
         }
         developers {
             developer {
-                id.set("username")
-                name.set("User Name")
-                url.set("https://github.com/username/")
+                id.set("eastar")
+                name.set("eastar Jeong")
+                url.set("https://git.eastar.dev")
             }
         }
         scm {
