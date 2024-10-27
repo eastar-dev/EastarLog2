@@ -59,7 +59,7 @@ mavenPublishing {
     // 모든 배포에 대해 GPG 서명 활성화
     signAllPublications()
 
-    coordinates("dev.eastar", "log-no-op", libs.versions.version.get())
+    coordinates("dev.eastar", "easter-log-no-op", libs.versions.version.get())
 
     pom {
         //프로젝트 이름, 설명, URL
