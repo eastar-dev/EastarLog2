@@ -1,0 +1,62 @@
+[versions]
+#######################################################################################################
+#app
+#######################################################################################################
+compileSdk = "34"
+targetSdk = "34"
+minSdk = "26"
+version = "2.5.0"
+#######################################################################################################
+agp = "8.6.1"
+firebaseMessaging = "24.0.3"
+kotlin = "2.0.20"
+core = "1.13.1"
+junit = "4.13.2"
+junitVersion = "1.2.1"
+espressoCore = "3.6.1"
+lifecycle = "2.8.6"
+activity = "1.9.3"
+fragment = "1.8.4"
+composeBom = "2024.10.00"
+#maven = "2.1"
+#https://github.com/vanniktech/gradle-maven-publish-plugin
+vankiktechMaven = "0.30.0"
+compose-android = "1.7.4"
+material3 = "1.3.0"
+#######################################################################################################
+eastar-log = "2.5.0"
+
+[libraries]
+androidx-core = { group = "androidx.core", name = "core-ktx", version.ref = "core" }
+androidx-lifecycle-runtime = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-savedstate = { module = "androidx.lifecycle:lifecycle-viewmodel-savedstate", version.ref = "lifecycle" }
+androidx-fragment = { group = "androidx.fragment", name = "fragment-ktx", version.ref = "fragment" }
+
+firebase-messaging = { module = "com.google.firebase:firebase-messaging-ktx", version.ref = "firebaseMessaging" }
+
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
+androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
+
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activity" }
+
+#androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+#버전명시
+#https://velog.io/@kej_ad/AndroidLibrary%EC%95%88%EB%93%9C%EB%A1%9C%EC%9D%B4%EB%93%9C-%EB%9D%BC%EC%9D%B4%EB%B8%8C%EB%9F%AC%EB%A6%ACSDK-Maven-Central%EC%97%90-%EB%B0%B0%ED%8F%AC%ED%95%98%EA%B8%B0-2024-08-%EC%B5%9C%EC%8B%A0#%EC%98%88%EC%99%B8-%EC%B2%98%EB%A6%AC
+androidx-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "compose-android" }
+androidx-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics", version.ref = "compose-android" }
+androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version.ref = "compose-android" }
+androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview", version.ref = "compose-android" }
+androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest", version.ref = "compose-android" }
+androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4", version.ref = "compose-android" }
+androidx-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
+#######################################################################################################
+eastar-log = { module = "dev.eastar:eastar-log", version.ref = "eastar-log" }
+eastar-log-no-op = { module = "dev.eastar:eastar-log-no-op", version.ref = "eastar-log" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+vanniktech-maven = { id = "com.vanniktech.maven.publish", version.ref = "vankiktechMaven" }

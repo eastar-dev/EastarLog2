@@ -10,7 +10,12 @@ So I made it.
 android.log.Log help you'r project tracking find bug.
 
 ### log quick setting you'r project
-just replace all 'import android.util.Log;' -> 'import android.log.Log;' just it!
+just replace all 
+```kotlin
+'import android.util.Log' -> 'import android.log.Log'
+```
+just it!
+
 
 ### log show or hide?
 ```java

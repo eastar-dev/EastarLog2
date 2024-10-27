@@ -1,27 +1,31 @@
 package dev.eastar.log.demo
 
-import android.app.Activity
 import android.content.Intent
-import android.log.LogActivity
 import android.os.Bundle
 import android.widget.TextView
+import androidx.activity.ComponentActivity
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 
-@Suppress("FunctionName", "unused", "NonAsciiCharacters")
-class BActivity : LogActivity() {
+class BActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val launcher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { it: ActivityResult ->
+        }
+
         setContentView(TextView(this).apply {
             text = "B"
             textSize = 100.sp
-            setOnClickListener { startActivityForResult(Intent(context, CActivity::class.java),2) }
+            setOnClickListener { launcher.launch(Intent(context, CActivity::class.java)) }
+        })
+
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                setResult(RESULT_OK, intent.apply { putExtra("from", "BActivity") })
+                finish()
+            }
         })
     }
 
-    override fun onBackPressed() {
-        setResult(Activity.RESULT_OK, intent.apply { putExtra("from", "BActivity") })
-        super.onBackPressed()
-    }
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-    }
 }

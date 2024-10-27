@@ -2,13 +2,25 @@ package dev.eastar.log.demo
 
 import android.content.Intent
 import android.log.Log
-import android.log.LogActivity
 import android.os.Bundle
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.activity.ComponentActivity
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 
-class MainActivity : LogActivity() {
+class MainActivity : ComponentActivity() {
+
+    // Define ActivityResultLauncher to start BActivity and handle the result
+    private val startBActivityLauncher: ActivityResultLauncher<Intent> =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) {
+                val fromActivity = result.data?.getStringExtra("from") ?: "Unknown"
+                Log.i("ActivityResult", "Returned from $fromActivity")
+            }
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -17,7 +29,14 @@ class MainActivity : LogActivity() {
             TextView(context).apply {
                 text = "1"
                 textSize = 100.sp
-                setOnClickListener { startActivityForResult(Intent(context, BActivity::class.java), 1) }
+                setOnClickListener {
+                    // Use the launcher to start BActivity instead of startActivityForResult
+                    startBActivityLauncher.launch(Intent(context, BActivity::class.java))
+                }
+            }.also { addView(it) }
+            Button(context).apply {
+                text = "Log Test"
+                setOnClickListener { logTest() }
             }.also { addView(it) }
             Button(context).apply {
                 text = "Legacy log test"
@@ -31,13 +50,10 @@ class MainActivity : LogActivity() {
                 text = "Migration log with classname filter"
                 setOnClickListener {
                     //way 1
-                    Log.logFilterClassNameRegex = "${LoggerMigration::class.java.name}".toRegex()
+                    Log.NOT_REGEX = "${LoggerMigration::class.java.name}".toRegex()
                     //way 2
-                    Log.logFilterPredicate = {
-//                        check
-//                        android.util.Log.e("~", it.className)
-//                        android.util.Log.e("~", it.fileName)
-//                        android.util.Log.e("~", it.methodName)
+                    Log.NOT_PREDICATE = {
+                        // Custom logging filter
                         false
                     }
                     LoggerMigration.e("%s %d", "test", 200)
@@ -46,16 +62,11 @@ class MainActivity : LogActivity() {
         })
 
         logTest()
-
-        getMaxLogLength_when_tag1Byte()
     }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-    }
-
 
     private fun logTest() {
+        getMaxLogLength_when_tag1Byte()
+
         testMethod()
         한글함수()
         이것은_한글_함수_테스트_입니다()
@@ -70,6 +81,8 @@ class MainActivity : LogActivity() {
         length12345678()
         length123456789()
         length1234567890()
+
+        Exception().printStackTrace()
     }
 
     private fun testMethod() {
@@ -110,5 +123,4 @@ class MainActivity : LogActivity() {
             //log 4064
         }
     }
-
 }

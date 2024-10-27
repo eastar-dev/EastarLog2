@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-@file:Suppress("FunctionName", "unused", "UNUSED_PARAMETER")
+@file:Suppress("FunctionName", "unused", "MemberVisibilityCanBePrivate", "UNUSED_PARAMETER")
 
 package android.log
 
+import android.app.Application
 import android.content.Context
-import android.graphics.Bitmap
 import android.net.Uri
-import android.view.MotionEvent
-import android.view.View
+import androidx.annotation.VisibleForTesting
 import java.io.File
 
 /** @author eastar*/
@@ -35,6 +34,15 @@ object Log {
     const val ASSERT = android.util.Log.ASSERT
 
     @JvmField
+    var LOG = false
+
+    @JvmField
+    var LOG_SYSOUT = false
+
+    @JvmField
+    var FILE_LOG: File? = null
+
+    @JvmField
     var START = android.util.Log.DEBUG
 
     @JvmField
@@ -44,99 +52,107 @@ object Log {
     var LIFECYCLE_DESTROYED = android.util.Log.DEBUG
 
     @JvmField
-    var LOG = false
+    var PREFIX = "``"
 
     @JvmField
-    var FILE_LOG: File? = null
+    var PREFIX_MULTILINE: String = "$PREFIX▼"
 
     @JvmField
-    var logFilterClassNameRegex: Regex = "".toRegex()
+    var TAG_WIDTH = 34
 
     @JvmField
-    var logFilterPredicate: (StackTraceElement) -> Boolean = { false }
+    var LOCATOR_WIDTH = 40
+
+    @JvmField
+    var MAX_LOG_LINE_BYTE_SIZE = 3600
+
+    @JvmField
+    var defaultLogFilterClassNameRegex: Regex = "".toRegex()
+
+    @JvmField
+    var NOT_REGEX: Regex = "".toRegex()
+
+    @JvmField
+    var NOT_PREDICATE: (StackTraceElement) -> Boolean = { false }
 
     @JvmStatic
-    fun getTag(stack: StackTraceElement = StackTraceElement("", "", "", 0)): String = ""
+    fun getLocator(stack: StackTraceElement): String = ""
 
     @JvmStatic
-    fun p(priority: Int, vararg args: Any?): Int = 0
+    fun getMethodName(stack: StackTraceElement): String = ""
 
     @JvmStatic
-    fun pt(priority: Int, tag: String, vararg args: Any?): Int = 0
+    fun getClzName(stack: StackTraceElement): String = ""
 
     @JvmStatic
-    fun ps(priority: Int, info: StackTraceElement, vararg args: Any?): Int = 0
-
-    @JvmStatic
-    fun pn(priority: Int, depth: Int, vararg args: Any?): Int = 0
-
-    @JvmStatic
-    fun pc(priority: Int, method: String, vararg args: Any?): Int = 0
+    fun stack(): StackTraceElement = StackTraceElement("", "", "", 0)
 
     @JvmStatic
     fun pm(priority: Int, method: String, vararg args: Any?): Int = 0
 
     @JvmStatic
-    fun toast(context: Context, vararg args: Any?) = Unit
-
+    fun pc(priority: Int, method: String, vararg args: Any?): Int = 0
 
     @JvmStatic
+    fun pn(priority: Int, depth: Int, vararg args: Any?): Int = 0
+
+    @JvmStatic
+    fun p(priority: Int, vararg args: Any?): Int = 0
+
+    @JvmStatic
+    fun ps(priority: Int, stack: StackTraceElement, vararg args: Any?): Int = 0
+
+    @JvmStatic
+    fun pml(priority: Int, methodName: String, locator: String, vararg args: Any?): Int = 0
+
+    ///////////////////////////////////////////////////////////////////////////
+    // toString for log
+    ///////////////////////////////////////////////////////////////////////////
+    fun toLog(vararg args: Any?): String = ""
+
+    ///////////////////////////////////////////////////////////////////////////
+    // case by log
+    ///////////////////////////////////////////////////////////////////////////
+    @JvmStatic
+    fun obj(o: Any?): String = ""
+
     fun debounce(vararg args: Any?) = Unit
-
-    @JvmStatic
-    fun viewTree(parent: View, depth: Int = 0) = Unit
 
     @JvmStatic
     fun clz(clz: Class<*>) = Unit
 
-    @JvmStatic
-    fun _toHexString(byteArray: ByteArray?): String = ""
-
-    @JvmStatic
-    fun _toByteArray(hexString: String): ByteArray = byteArrayOf()
-
-    @JvmStatic
-    fun _DUMP_object(o: Any?): String = ""
-
     fun provider(context: Context, uri: Uri?) = Unit
+
+    fun divider(vararg args: Any?) = Unit
+    fun sbc(vararg args: Any?, action: (Any?) -> Unit) = Unit
+    fun toast(vararg args: Any?) = Unit
+
+
+    @JvmStatic
+    fun tic_s(vararg args: Any? = arrayOf("")) = Unit
 
     @JvmStatic
     fun tic(vararg args: Any? = arrayOf("")) = Unit
-
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    //image save
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    @JvmStatic
-    fun compress(name: String, data: ByteArray) = Unit
-
-    @JvmStatic
-    fun compress(name: String, bmp: Bitmap) = Unit
 
     //flog
     @JvmStatic
     fun flog(vararg args: Any?) = Unit
 
-    fun measure(widthMeasureSpec: Int, heightMeasureSpec: Int) = Unit
-
-
+    @VisibleForTesting
     @JvmStatic
-    fun onTouchEvent(event: MotionEvent) = Unit
-
-    class TraceLog : Throwable()
-
     fun println(vararg args: Any?) = Unit
 
-    //etc
-    fun String.takeLastSafe(length: Int = 0): String = ""
-    fun String.splitSafe(lengthByte: Int): List<String> = emptyList()
-    fun ByteArray.takeSafe(lengthByte: Int, startOffset: Int): String = ""
-    fun String.takeSafe(lengthByte: Int, startOffset: Int = 0) = ""
+    @JvmOverloads
+    @JvmStatic
+    fun printStackTrace(th: Throwable = Throwable()) = Unit
 
+    @JvmStatic
+    fun simplePrintStackTrace() = Unit
 
     /////////////////////////////////////////////////////////////////////////////
     //over lap func
     @JvmStatic
-    fun println(priority: Int, tag: String?, msg: String?): Int = 0
+    fun println(priority: Int, vararg args: Any?): Int = 0
 
     @JvmStatic
     fun a(vararg args: Any?): Int = 0
@@ -156,42 +172,28 @@ object Log {
     @JvmStatic
     fun v(vararg args: Any?): Int = 0
 
+    //What a Terrible Failure
     @JvmStatic
-    fun printStackTrace(): Unit = Unit
-
-    @JvmStatic
-    fun printStackTrace(th: Throwable): Unit = Unit
+    fun wtf(vararg args: Any?): Int = 0
 
     @JvmStatic
     fun getStackTraceString(th: Throwable): String = ""
-
-    //xml
-    @JvmStatic
-    fun prettyXml(xml: String): String = ""
-
-    @JvmField
-    var PREFIX = "``"
-
-    @JvmField
-    var PREFIX_MULTILINE: String = "$PREFIX▼"
-
-    @JvmField
-    var TAG_LENGTH = 70
-
-    @JvmField
-    var MAX_LOG_LINE_BYTE_SIZE = 3600
-
-    @JvmField
-    var defaultLogFilterClassNameRegex: Regex = "^android\\..+|^com\\.android\\..+|^java\\..+".toRegex()
-
-
-    @JvmStatic
-    fun getLocator(info: StackTraceElement): String = ""
-
-    @JvmStatic
-    fun getClzMethod(info: StackTraceElement): String = ""
-
-    @JvmStatic
-    fun getStackFilter(filterClassNameRegex: String? = null): StackTraceElement = StackTraceElement("", "", "", 0)
-
 }
+
+val String?.singleLog: String get() = ""
+
+///////////////////////////////////////////////////////////////////////////
+// log print width align
+///////////////////////////////////////////////////////////////////////////
+val Any?.`1` get() = ""
+fun Any?._pad(width: Int = 0) = ""
+fun Any?._pads(width: Int = 0) = ""
+fun Any?._pade(width: Int = 0) = ""
+
+///////////////////////////////////////////////////////////////////////////
+// Log Ktx
+///////////////////////////////////////////////////////////////////////////
+fun Any?._DUMP(vararg args: Any?) = Unit
+fun <T> T._onDump(stack: Any? = null): T = this
+
+fun Application.logLifeCycle() = Unit
