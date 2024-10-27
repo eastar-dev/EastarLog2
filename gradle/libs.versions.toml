@@ -5,7 +5,7 @@
 compileSdk = "34"
 targetSdk = "34"
 minSdk = "26"
-version = "2.4.6"
+version = "2.5.0"
 #######################################################################################################
 agp = "8.6.1"
 firebaseMessaging = "24.0.3"
@@ -24,7 +24,7 @@ vankiktechMaven = "0.30.0"
 compose-android = "1.7.4"
 material3 = "1.3.0"
 #######################################################################################################
-log = "2.4.6"
+eastar-log = "2.5.0"
 
 [libraries]
 androidx-core = { group = "androidx.core", name = "core-ktx", version.ref = "core" }
@@ -51,8 +51,8 @@ androidx-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-man
 androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4", version.ref = "compose-android" }
 androidx-material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
 #######################################################################################################
-eastar-log = { module = "dev.eastar:log", version.ref = "log" }
-eastar-log-no-op = { module = "dev.eastar:log-no-op", version.ref = "log" }
+eastar-log = { module = "dev.eastar:eastar-log", version.ref = "eastar-log" }
+eastar-log-no-op = { module = "dev.eastar:eastar-log-no-op", version.ref = "eastar-log" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
