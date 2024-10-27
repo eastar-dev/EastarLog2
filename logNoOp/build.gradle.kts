@@ -39,37 +39,6 @@ dependencies {
 }
 
 /**
- * jitpack with id("maven-publish")
- *
- * build to same
- * sh ./gradlew log:bundleReleaseAar
- *
- * https://developer.android.com/studio/build/maven-publish-plugin
- * run gradle publishToMavenLocal
- * and check
- *  cd ~/.m2/repository/com/example/MyLibrary/log
- * log-1.0.pom
- * log-1.0.aar
- * log-1.0.module
- *
- * Because the components are created only during the afterEvaluate phase, you must
- * configure your publications using the afterEvaluate() lifecycle method.
- */
-afterEvaluate {
-    publishing {
-        publications {
-            create<MavenPublication>("release") {
-                // Applies the component for the release build variant.
-                from(components["release"])
-                groupId = "com.example.MyLibrary"
-                artifactId = "log-no-op"
-                version = project.version as String
-            }
-        }
-    }
-}
-
-/**
  * Maven Central
  *
  * id("com.vanniktech.maven.publish") version "0.30.0"

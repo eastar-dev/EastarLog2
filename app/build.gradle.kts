@@ -52,7 +52,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime)
 
     implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
+    //implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
@@ -60,16 +60,11 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
+    //androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }
-
-dependencies {
-    implementation(project(":log"))
-}
-
 
 //Keystore sign
 //https://developer.android.com/studio/publish/app-signing
@@ -97,13 +92,11 @@ android {
     }
 }
 
-
-// Log repository and dependencies
-//repositories {
-//    maven { url = uri("https://jitpack.io") }
-//}
-
 dependencies {
     debugImplementation(project(":log"))
     releaseImplementation(project(":logNoOp"))
 }
+//dependencies {
+//    debugImplementation(libs.eastar.log)
+//    releaseImplementation(libs.eastar.log.no.op)
+//}

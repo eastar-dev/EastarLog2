@@ -11,4 +11,10 @@ class AppApplication : Application() {
         super.attachBaseContext(base)
         Log.NOT_REGEX = "dev.eastar.log.demo.BActivity".toRegex()
     }
+
+    override fun onCreate() {
+        super.onCreate()
+        easterEgg()
+        logLifeCycle()
+    }
 }
