@@ -44,16 +44,12 @@ dependencies {
  * id("com.vanniktech.maven.publish") version "0.30.0"
  *
  * import com.vanniktech.maven.publish.SonatypeHost
+ *
+ * 배포
+ * ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache
  */
-
 mavenPublishing {
-    // 기본 Maven Central로 배포
-    //publishToMavenCentral(SonatypeHost.DEFAULT)
-
-    // 또는 https://s01.oss.sonatype.org로 배포
-    //publishToMavenCentral(SonatypeHost.S01)
-
-    // 또는 https://central.sonatype.com/를 사용하는 Central Portal로 배포
+    //https://central.sonatype.com/를 사용하는 Central Portal로 배포
     publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
 
     // 모든 배포에 대해 GPG 서명 활성화

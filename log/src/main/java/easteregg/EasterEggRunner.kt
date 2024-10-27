@@ -17,8 +17,10 @@ import androidx.core.view.doOnPreDraw
 import java.lang.reflect.Method
 import kotlin.reflect.KClass
 
-fun Application.easterEgg(vararg easterEggs: KClass<*>) = registerActivityLifecycleCallbacks(
-    EasterEggRunner(*easterEggs.map { it.java.name }.toTypedArray())
+fun Application.easterEgg(vararg easterEgg: KClass<*>) = registerActivityLifecycleCallbacks(
+    EasterEggRunner(
+        *easterEgg.map { it.java.name }.toTypedArray()
+    )
 )
 
 class EasterEggRunner(
@@ -47,9 +49,12 @@ class EasterEggRunner(
                 getLocationInWindow(locationInWindow)
                 if (locationInWindow[1] == 0) y = systemWindowInsetTop.toFloat()
             }
+            val buildTime = runCatching {
+                activity.assets.open("build_time.txt").bufferedReader().use { it.readText().trim() }
+            }.getOrNull()
 
             @SuppressLint("SetTextI18n")
-            text = "$versionName::$versionCode"
+            text = "$versionName $buildTime ver:$versionCode"
             tag = EASTER_EGG_VIEW_TAG
             setTextColor(0xffff0000.toInt())
             textSize = 9f // sp

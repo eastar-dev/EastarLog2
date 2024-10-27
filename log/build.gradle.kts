@@ -44,8 +44,10 @@ dependencies {
  * id("com.vanniktech.maven.publish") version "0.30.0"
  *
  * import com.vanniktech.maven.publish.SonatypeHost
+ *
+ * 배포
+ * ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache
  */
-
 mavenPublishing {
     // 기본 Maven Central로 배포
     //publishToMavenCentral(SonatypeHost.DEFAULT)

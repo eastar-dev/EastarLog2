@@ -18,18 +18,10 @@
 
 package android.log
 
-import android.app.Activity
-import android.app.Instrumentation
+import android.app.Application
 import android.content.Context
-import android.content.Intent
-import android.database.Cursor
-import android.graphics.Bitmap
 import android.net.Uri
-import android.os.Bundle
 import androidx.annotation.VisibleForTesting
-import androidx.fragment.app.Fragment
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.SavedStateHandle
 import java.io.File
 
 /** @author eastar*/
@@ -78,37 +70,22 @@ object Log {
     var defaultLogFilterClassNameRegex: Regex = "".toRegex()
 
     @JvmField
-    var logFilterClassNameRegex: Regex = "".toRegex()
+    var NOT_REGEX: Regex = "".toRegex()
 
     @JvmField
-    var logFilterPredicate: (StackTraceElement) -> Boolean = { false }
-
-    @JvmField
-    var getTag: (methodName: String?, locator: String) -> String = { _, _ -> "" }
-
-    @JvmField
-    var getPreMsg: (methodName: String?, locator: String) -> String = { _, _ -> "" }
+    var NOT_PREDICATE: (StackTraceElement) -> Boolean = { false }
 
     @JvmStatic
     fun getLocator(stack: StackTraceElement): String = ""
 
     @JvmStatic
-    fun getLocatorWidth(stack: StackTraceElement, width: Int = LOCATOR_WIDTH): String = ""
-
-    @JvmStatic
     fun getMethodName(stack: StackTraceElement): String = ""
-
-    @JvmStatic
-    fun getMethodNameWidth(stack: StackTraceElement, width: Int = TAG_WIDTH): String = ""
 
     @JvmStatic
     fun getClzName(stack: StackTraceElement): String = ""
 
     @JvmStatic
-    fun getClzMethod(stack: StackTraceElement): String = ""
-
-    @JvmStatic
-    fun getStack(filterNot: Regex): StackTraceElement = StackTraceElement("", "", "", 0)
+    fun stack(): StackTraceElement = StackTraceElement("", "", "", 0)
 
     @JvmStatic
     fun pm(priority: Int, method: String, vararg args: Any?): Int = 0
@@ -128,15 +105,28 @@ object Log {
     @JvmStatic
     fun pml(priority: Int, methodName: String, locator: String, vararg args: Any?): Int = 0
 
+    ///////////////////////////////////////////////////////////////////////////
+    // toString for log
+    ///////////////////////////////////////////////////////////////////////////
+    fun toLog(vararg args: Any?): String = ""
+
+    ///////////////////////////////////////////////////////////////////////////
+    // case by log
+    ///////////////////////////////////////////////////////////////////////////
+    @JvmStatic
+    fun obj(o: Any?): String = ""
+
     fun debounce(vararg args: Any?) = Unit
 
     @JvmStatic
     fun clz(clz: Class<*>) = Unit
 
-    @JvmStatic
-    fun _DUMP_object(o: Any?): String = ""
-
     fun provider(context: Context, uri: Uri?) = Unit
+
+    fun divider(vararg args: Any?) = Unit
+    fun sbc(vararg args: Any?, action: (Any?) -> Unit) = Unit
+    fun toast(vararg args: Any?) = Unit
+
 
     @JvmStatic
     fun tic_s(vararg args: Any? = arrayOf("")) = Unit
@@ -148,11 +138,6 @@ object Log {
     @JvmStatic
     fun flog(vararg args: Any?) = Unit
 
-
-    //xml
-    @JvmStatic
-    fun prettyXml(xml: String): String = ""
-
     @VisibleForTesting
     @JvmStatic
     fun println(vararg args: Any?) = Unit
@@ -160,6 +145,9 @@ object Log {
     @JvmOverloads
     @JvmStatic
     fun printStackTrace(th: Throwable = Throwable()) = Unit
+
+    @JvmStatic
+    fun simplePrintStackTrace() = Unit
 
     /////////////////////////////////////////////////////////////////////////////
     //over lap func
@@ -190,54 +178,22 @@ object Log {
 
     @JvmStatic
     fun getStackTraceString(th: Throwable): String = ""
-
-    ///////////////////////////////////////////////////////////////////////////
-    // etc 없어질것
-    ///////////////////////////////////////////////////////////////////////////
 }
 
-private val String?.singleLog: String
-    get() = ""
+val String?.singleLog: String get() = ""
 
-val Boolean?.IW: Int get() = android.util.Log.INFO
+///////////////////////////////////////////////////////////////////////////
+// log print width align
+///////////////////////////////////////////////////////////////////////////
+val Any?.`1` get() = ""
+fun Any?._pad(width: Int = 0) = ""
+fun Any?._pads(width: Int = 0) = ""
+fun Any?._pade(width: Int = 0) = ""
 
 ///////////////////////////////////////////////////////////////////////////
 // Log Ktx
 ///////////////////////////////////////////////////////////////////////////
+fun Any?._DUMP(vararg args: Any?) = Unit
+fun <T> T._onDump(stack: Any? = null): T = this
 
-fun Lifecycle._DUMP() = Unit
-
-fun Activity._DUMP() = Unit
-
-fun Fragment._DUMP() = Unit
-
-fun Intent?._DUMP() = Unit
-fun Instrumentation.ActivityResult._DUMP() = Unit
-fun Bundle?._DUMP() = Unit
-fun SavedStateHandle._DUMP() = Unit
-
-///////////////////////////////////////////////////////////////////////////
-// db
-///////////////////////////////////////////////////////////////////////////
-
-fun Cursor?._DUMP(limit: Int = Int.MAX_VALUE) = Unit
-
-///////////////////////////////////////////////////////////////////////////
-// image
-///////////////////////////////////////////////////////////////////////////
-fun ByteArray._DUMP(name: String = "bytes") = Unit
-
-fun Bitmap._DUMP(name: String = "bitmap") = Unit
-
-///////////////////////////////////////////////////////////////////////////
-// internal util
-///////////////////////////////////////////////////////////////////////////
-
-fun sbc(block: () -> Unit) = Unit
-
-///////////////////////////////////////////////////////////////////////////
-// hex util
-///////////////////////////////////////////////////////////////////////////
-fun ByteArray?._toHex(): String = ""
-
-fun String?._toByteArray(): ByteArray = ByteArray(0)
+fun Application.logLifeCycle() = Unit

@@ -1,4 +1,5 @@
-import android.log.Log
+package android.log
+
 import org.junit.Test
 
 class EastarLog2TestNoOp {

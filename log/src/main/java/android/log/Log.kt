@@ -49,7 +49,6 @@ import androidx.lifecycle.ViewModel
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.actor
 import kotlinx.coroutines.flow.Flow
@@ -126,14 +125,8 @@ object Log {
     @JvmStatic
     fun getLocator(stack: StackTraceElement): String = "(%s:%d)".format(stack.fileName, stack.lineNumber)
 
-    //@JvmStatic
-    //fun getLocatorWidth(stack: StackTraceElement, width: Int = LOCATOR_WIDTH): String = getLocator(stack).takePadEndWidth(width)
-
     @JvmStatic
     fun getMethodName(stack: StackTraceElement): String = runCatching { stack.methodName }.getOrDefault("?")
-
-    //@JvmStatic
-    //fun getMethodNameWidth(stack: StackTraceElement, width: Int = TAG_WIDTH): String = getMethodName(stack).takePadEndWidth(width)
 
     @JvmStatic
     fun getClzName(stack: StackTraceElement): String = runCatching { stack.className.takeLastWhile { it != '.' } }.getOrDefault(stack.className)
@@ -178,7 +171,7 @@ object Log {
             NOT_REGEX.matches(it.className)
         }
 
-    fun firstStack(): StackTraceElement = stack().first()
+    internal fun firstStack(): StackTraceElement = stack().first()
 
     //마지막 methodName에 log를 찍는다.
     private fun getStackMethod(methodName: String): StackTraceElement {
@@ -233,7 +226,7 @@ object Log {
     @JvmStatic
     fun pml(priority: Int, methodName: String, locator: String, vararg args: Any?): Int {
         if (!LOG) return 0
-        val msg = getMessage(*args)
+        val msg = toLog(*args)
         return printlnInternal(priority, methodName, locator, msg)
     }
 
@@ -259,46 +252,10 @@ object Log {
             }
     }
 
-    private var lastMillis: Long = 0
-
-    fun debounce(vararg args: Any?) {
-        if (!LOG) return
-        if (lastMillis > System.currentTimeMillis() - TimeUnit.SECONDS.toMillis(1))
-            return
-        lastMillis = System.currentTimeMillis()
-        i(*args)
-    }
-
-
-    @JvmStatic
-    fun clz(clz: Class<*>) {
-        if (!LOG) return
-        e(clz)
-        //@formatter:off
-        i("getName              ", clz.name)
-        i("getPackage           ", clz.`package`)
-        i("getCanonicalName     ", clz.canonicalName)
-        i("getDeclaredClasses   ", clz.declaredClasses.contentToString())
-        i("getClasses           ", clz.classes.contentToString())
-        i("getSigners           ", clz.signers?.contentToString())
-        i("getEnumConstants     ", clz.enumConstants?.contentToString())
-        i("getTypeParameters    ", clz.typeParameters.contentToString())
-        i("getGenericInterfaces ", clz.genericInterfaces.contentToString())
-        i("getInterfaces        ", clz.interfaces.contentToString())
-        if (clz.isAnnotation     ) i("isAnnotation         ", clz.isAnnotation)
-        if (clz.isAnonymousClass ) i("isAnonymousClass     ", clz.isAnonymousClass)
-        if (clz.isArray          ) i("isArray              ", clz.isArray)
-        if (clz.isEnum           ) i("isEnum               ", clz.isEnum)
-        if (clz.isInterface      ) i("isInterface          ", clz.isInterface)
-        if (clz.isLocalClass     ) i("isLocalClass         ", clz.isLocalClass)
-        if (clz.isMemberClass    ) i("isMemberClass        ", clz.isMemberClass)
-        if (clz.isPrimitive      ) i("isPrimitive          ", clz.isPrimitive)
-        if (clz.isSynthetic      ) i("isSynthetic          ", clz.isSynthetic)
-        //@formatter:on
-    }
-
-    /** dump */
-    private fun getMessage(vararg args: Any?): String {
+    ///////////////////////////////////////////////////////////////////////////
+    // toString for log
+    ///////////////////////////////////////////////////////////////////////////
+    fun toLog(vararg args: Any?): String {
         if (args.isEmpty())
             return ""
 
@@ -307,12 +264,12 @@ object Log {
                 when (it) {
                     //@formatter:off
                     null -> "null"
-                    is Class<*> -> _DUMP(it)
+                    is Class<*> -> it.simpleName
                     is View -> _DUMP(it)
                     is Intent -> _DUMP(it)
                     is Bundle -> _DUMP(it)
-                    is Throwable -> _DUMP(it)
-                    is Method -> _DUMP(it)
+                    is Throwable -> it.stackTraceToString()
+                    is Method -> it.run { "$modifiers ${returnType.simpleName.padEnd(20).take(20)}${declaringClass.simpleName}.$name(${parameterTypes.joinToString { it.simpleName }})" }
                     is JSONObject -> it.toString(2)
                     is JSONArray -> it.toString(2)
                     is CharSequence -> _DUMP(it.toString())
@@ -333,15 +290,7 @@ object Log {
         }
     }.getOrDefault(text)
 
-    private fun _DUMP(method: Method): String = method.run {
-        "$modifiers ${returnType.simpleName.padEnd(20).take(20)}${declaringClass.simpleName}.$name(${parameterTypes.joinToString { it.simpleName }})"
-    }
-
-    private fun _DUMP(cls: Class<*>?): String {
-        return cls?.simpleName ?: "null_Class<?>"
-    }
-
-    fun _DUMP(uri: Uri?): String {
+    private fun _DUMP(uri: Uri?): String {
         uri ?: return "null_Uri"
         //		return uri.toString();
         val sb = StringBuilder()
@@ -355,7 +304,7 @@ object Log {
         return sb.toString()
     }
 
-    fun _DUMP(intent: Intent?): String {
+    internal fun _DUMP(intent: Intent?): String {
         intent ?: return "null_Intent"
         //@formatter:off
         return (intent.component?.className ?: intent.toUri(0)) +
@@ -368,7 +317,7 @@ object Log {
         //@formatter:on
     }
 
-    fun _DUMP(bundle: Bundle?): String {
+    internal fun _DUMP(bundle: Bundle?): String {
         val b = bundle ?: return "null_Bundle"
         return b.keySet().sorted()
             .joinToString("\n") { k ->
@@ -380,7 +329,7 @@ object Log {
             }
     }
 
-    fun _DUMP_IntentFlags(flags: Int): String {
+    private fun _DUMP_IntentFlags(flags: Int): String {
         val flagMap = mapOf(
             0x00000001 to "FLAG_GRANT_READ_URI_PERMISSION",
             0x00000002 to "FLAG_GRANT_WRITE_URI_PERMISSION",
@@ -424,7 +373,7 @@ object Log {
         }
     }
 
-    fun _arrayToString(array: Any): String = when (array) {
+    internal fun _arrayToString(array: Any): String = when (array) {
         is IntArray -> array.joinToString(prefix = "[", postfix = "]")
         is ByteArray -> array.take(MAX_LOG_LINE_BYTE_SIZE / 2).joinToString(prefix = "${array.size}[", postfix = "]") { it.toString(16) }
         is ShortArray -> array.joinToString(prefix = "[", postfix = "]")
@@ -440,98 +389,9 @@ object Log {
 
     private inline fun <T> T?.ifNotBlank(transform: (T) -> String): String = if (this == null || (this as? CharSequence)?.isBlank() == true || (this as? Number) == 0x00) "" else transform(this)
 
-    private fun _DUMP(th: Throwable?): String = th?.stackTraceToString() ?: "Throwable"
-
-    @JvmStatic
-    fun _DUMP_object(o: Any?): String {
-        return _DUMP_object("", o, HashSet())
-    }
-
-    private fun _DUMP_object(k: String, v: Any?, duplication: MutableSet<Any>): String = kotlin.runCatching {
-        if (v == null) {
-            "$k:null\n"
-        } else if (v.javaClass.isArray) {
-            "$k:${v.javaClass.simpleName}=${_arrayToString(v)}"
-        } else if (v.javaClass.isPrimitive || v.javaClass.isEnum || v is Rect || v is RectF || v is Point || v is Number || v is Boolean || v is CharSequence) {
-            "$k:${v.javaClass.simpleName}=$v"
-        } else {
-            if (duplication.contains(v)) {
-                "$k:${v.javaClass.simpleName}=[duplication]"
-            } else {
-                duplication.add(v)
-                if (v is Collection<*>) {
-                    "$k:${v.javaClass.simpleName}=\n" + v.joinToString("\n") {
-                        _DUMP_object("  $k[item]", it, duplication)
-                    }
-                } else {
-                    "$k:${v.javaClass.simpleName}=\n" + v.javaClass.declaredFields.joinToString("\n") {
-                        it.isAccessible = true
-                        _DUMP_object("  $k.${it.name}", it[v], duplication)
-                    }
-                }
-            }
-        }
-    }.getOrDefault("$k:${v?.javaClass?.simpleName}=$v")
-
-    fun provider(context: Context, uri: Uri?) {
-        if (!LOG) return
-
-        if (uri == null) {
-            e("context==null || uri == null")
-            return
-        }
-        context.contentResolver.query(uri, null, null, null, null).use { it._DUMP(100) }
-    }
-
-    private var ticTimer = 0L
-
-    @JvmStatic
-    fun tic_s(vararg args: Any? = arrayOf("")) {
-        if (!LOG) return
-        synchronized(this) {
-            ticTimer = System.currentTimeMillis()
-            e(String.format(Locale.getDefault(), "%,15d", 0), getMessage(*args))
-        }
-    }
-
-    @JvmStatic
-    fun tic(vararg args: Any? = arrayOf("")) {
-        if (!LOG) return
-        synchronized(this) {
-            val e = System.currentTimeMillis()
-            val s = ticTimer
-            val interval = if (ticTimer == 0L) 0L else e - s
-            ticTimer = e
-            e(String.format(Locale.getDefault(), "%,15d", interval), getMessage(*args))
-        }
-    }
-
-    //flog
-    @JvmStatic
-    fun flog(vararg args: Any?) {
-        FILE_LOG ?: return
-        runCatching {
-            val info = firstStack()
-            val lines = getMessage(*args).split(LF)
-
-            val tag = "%-40s%-40d %-100s ``".format(Date().toString(), SystemClock.elapsedRealtime(), info.toString())
-
-            if (lines.isNotEmpty()) {
-                val token = lines.first()
-                FILE_LOG!!.appendText(tag + token + LF)
-            }
-
-            val space = "%-40s%-40s %-100s ``".format("", "", "")
-            repeat(lines.size) { token ->
-                FILE_LOG!!.appendText(space + token + LF)
-            }
-        }
-    }
-
-
     //xml
     @JvmStatic
-    fun prettyXml(xml: String): String {
+    private fun prettyXml(xml: String): String {
         val doc = DocumentBuilderFactory.newInstance().run {
             isValidating = false
             newDocumentBuilder().parse(xml.byteInputStream())
@@ -547,6 +407,159 @@ object Log {
         return result.writer.toString()
     }
 
+
+    ///////////////////////////////////////////////////////////////////////////
+    // case by log
+    ///////////////////////////////////////////////////////////////////////////
+    @JvmStatic
+    fun obj(o: Any?) {
+        d(obj("", o, HashSet()))
+    }
+
+    private fun obj(k: String, v: Any?, duplication: MutableSet<Any>): String = kotlin.runCatching {
+        if (v == null) {
+            "$k:null\n"
+        } else if (v.javaClass.isArray) {
+            "$k:${v.javaClass.simpleName}=${_arrayToString(v)}"
+        } else if (v.javaClass.isPrimitive || v.javaClass.isEnum || v is Rect || v is RectF || v is Point || v is Number || v is Boolean || v is CharSequence) {
+            "$k:${v.javaClass.simpleName}=$v"
+        } else {
+            if (duplication.contains(v)) {
+                "$k:${v.javaClass.simpleName}=[duplication]"
+            } else {
+                duplication.add(v)
+                if (v is Collection<*>) {
+                    "$k:${v.javaClass.simpleName}=\n" + v.joinToString("\n") {
+                        obj("  $k[item]", it, duplication)
+                    }
+                } else {
+                    "$k:${v.javaClass.simpleName}=\n" + v.javaClass.declaredFields.joinToString("\n") {
+                        it.isAccessible = true
+                        obj("  $k.${it.name}", it[v], duplication)
+                    }
+                }
+            }
+        }
+    }.getOrDefault("$k:${v?.javaClass?.simpleName}=$v")
+
+    private var lastMillis: Long = 0
+
+    fun debounce(vararg args: Any?) {
+        if (!LOG) return
+        if (lastMillis > System.currentTimeMillis() - TimeUnit.SECONDS.toMillis(1))
+            return
+        lastMillis = System.currentTimeMillis()
+        i(*args)
+    }
+
+
+    @JvmStatic
+    fun clz(clz: Class<*>) {
+        if (!LOG) return
+        e(clz)
+        //@formatter:off
+        i("getName              ", clz.name)
+        i("getPackage           ", clz.`package`)
+        i("getCanonicalName     ", clz.canonicalName)
+        i("getDeclaredClasses   ", clz.declaredClasses.contentToString())
+        i("getClasses           ", clz.classes.contentToString())
+        i("getSigners           ", clz.signers?.contentToString())
+        i("getEnumConstants     ", clz.enumConstants?.contentToString())
+        i("getTypeParameters    ", clz.typeParameters.contentToString())
+        i("getGenericInterfaces ", clz.genericInterfaces.contentToString())
+        i("getInterfaces        ", clz.interfaces.contentToString())
+        if (clz.isAnnotation     ) i("isAnnotation         ", clz.isAnnotation)
+        if (clz.isAnonymousClass ) i("isAnonymousClass     ", clz.isAnonymousClass)
+        if (clz.isArray          ) i("isArray              ", clz.isArray)
+        if (clz.isEnum           ) i("isEnum               ", clz.isEnum)
+        if (clz.isInterface      ) i("isInterface          ", clz.isInterface)
+        if (clz.isLocalClass     ) i("isLocalClass         ", clz.isLocalClass)
+        if (clz.isMemberClass    ) i("isMemberClass        ", clz.isMemberClass)
+        if (clz.isPrimitive      ) i("isPrimitive          ", clz.isPrimitive)
+        if (clz.isSynthetic      ) i("isSynthetic          ", clz.isSynthetic)
+        //@formatter:on
+    }
+
+
+    fun provider(context: Context, uri: Uri?) {
+        if (!LOG) return
+
+        if (uri == null) {
+            e("context==null || uri == null")
+            return
+        }
+        context.contentResolver.query(uri, null, null, null, null).use { it._DUMP(100) }
+    }
+
+    fun divider(stack: StackTraceElement = firstStack()) {
+        ps(VERBOSE, stack, "=".repeat(50))
+    }
+
+    fun sbc(stack: StackTraceElement = firstStack(), block: () -> Unit) {
+        ps(VERBOSE, stack, "=".repeat(50))
+        block()
+        ps(WARN, stack, "=".repeat(50))
+    }
+
+    //toast
+    private var logToast: Toast? = null
+
+    fun toast(context: Context, vararg args: Any?, duration: Int = Toast.LENGTH_SHORT, priority: Int = VERBOSE) {
+        val text = args.joinToString(" ") { it.toString() }
+        ps(priority, firstStack(), text)
+        logToast = Toast.makeText(context, text, duration)
+            .also {
+                logToast?.cancel()
+                it.show()
+            }
+    }
+
+    //tic
+    private var ticTimer = 0L
+
+    @JvmStatic
+    fun tic_s(vararg args: Any? = arrayOf("")) {
+        if (!LOG) return
+        synchronized(this) {
+            ticTimer = System.currentTimeMillis()
+            e(String.format(Locale.getDefault(), "%,15d", 0), toLog(*args))
+        }
+    }
+
+    @JvmStatic
+    fun tic(vararg args: Any? = arrayOf("")) {
+        if (!LOG) return
+        synchronized(this) {
+            val e = System.currentTimeMillis()
+            val s = ticTimer
+            val interval = if (ticTimer == 0L) 0L else e - s
+            ticTimer = e
+            e(String.format(Locale.getDefault(), "%,15d", interval), toLog(*args))
+        }
+    }
+
+    //flog
+    @JvmStatic
+    fun flog(vararg args: Any?) {
+        FILE_LOG ?: return
+        runCatching {
+            val info = firstStack()
+            val lines = toLog(*args).split(LF)
+
+            val tag = "%-40s%-40d %-100s ``".format(Date().toString(), SystemClock.elapsedRealtime(), info.toString())
+
+            if (lines.isNotEmpty()) {
+                val token = lines.first()
+                FILE_LOG!!.appendText(tag + token + LF)
+            }
+
+            val space = "%-40s%-40s %-100s ``".format("", "", "")
+            repeat(lines.size) { token ->
+                FILE_LOG!!.appendText(space + token + LF)
+            }
+        }
+    }
+
     @VisibleForTesting
     @JvmStatic
     fun println(vararg args: Any?) {
@@ -554,7 +567,7 @@ object Log {
 
         val stack = firstStack()
         val tag = runCatching { getClzName(stack) + "::" + getMethodName(stack) }.getOrDefault(stack.className) + ".." + getLocator(stack)
-        val msg = getMessage(*args)
+        val msg = toLog(*args)
 
         val sa = msg.split(LF).flatMap { it.splitSafe(MAX_LOG_LINE_BYTE_SIZE) }
         if (sa.isEmpty()) {
@@ -723,16 +736,6 @@ object Log {
         }
     }
 
-    fun divider(stack: StackTraceElement = firstStack()) {
-        ps(VERBOSE, stack, "=".repeat(50))
-    }
-
-    fun sbc(stack: StackTraceElement = firstStack(), block: () -> Unit) {
-        ps(VERBOSE, stack, "=".repeat(50))
-        block()
-        ps(WARN, stack, "=".repeat(50))
-    }
-
     ///////////////////////////////////////////////////////////////////////////
     // byte 단위로 한글짜르기
     ///////////////////////////////////////////////////////////////////////////
@@ -791,21 +794,15 @@ object Log {
 ///////////////////////////////////////////////////////////////////////////
 // ktx
 ///////////////////////////////////////////////////////////////////////////
-private val String?.singleLog: String
-    get() = this?.toByteArray()
-        ?.take(3500)
-        ?.dropLastWhile { it and 0xc0.toByte() != 0x80.toByte() }
-        ?.toByteArray()
-        ?.let { String(it) }
-        ?.replace("\r", "")
-        ?.replace('\n', '↵')
-        ?: ""
-
-val Boolean?.IW: Int get() = if (this == true) android.util.Log.INFO else android.util.Log.WARN
-
-//private inline fun <T> T?.ifNotBlank(transform: (T) -> String): String {
-//    return if (this == null || (this as? CharSequence)?.isBlank() == true || (this as? Number) == 0x00) "" else transform(this)
-//}
+val String?.singleLog: String
+    get() = orEmpty()
+        .toByteArray()
+        .take(3500)
+        .dropLastWhile { it and 0xc0.toByte() != 0x80.toByte() }
+        .toByteArray()
+        .let { String(it) }
+        .replace("\r", "")
+        .replace('\n', '↵')
 
 ///////////////////////////////////////////////////////////////////////////
 // 로그 간격
@@ -821,7 +818,7 @@ private val String.width get() = toByteArray(Charset.forName("euc-kr")).size
  * 가나다라마바 -> 가나다라마
  * 가나다라1마 -> 가나다라1.
  */
-fun takePadEndWidth(text: String?, width: Int, padChar: Char = ' '): String {
+private fun takePadEndWidth(text: String?, width: Int, padChar: Char = ' '): String {
     var textWidth = text?.take(width).orEmpty()
     while (textWidth.width > width)
         textWidth = textWidth.dropLast(1)
@@ -832,7 +829,7 @@ fun takePadEndWidth(text: String?, width: Int, padChar: Char = ' '): String {
 /**
  * 문자열의 폭을 맞추기 위해 뒤에 문자를 채워넣는다.
  */
-fun padEndWidth(text: String?, width: Int, padChar: Char = ' '): String {
+private fun padEndWidth(text: String?, width: Int, padChar: Char = ' '): String {
     val textWidth = text.orEmpty()
     return if (textWidth.width < width)
         textWidth.padEnd(textWidth.length + width - textWidth.width, padChar)
@@ -849,7 +846,7 @@ fun padEndWidth(text: String?, width: Int, padChar: Char = ' '): String {
  * 가나다라마바 -> 나다라마바
  * 가1나다라마 -> .1가나다라
  */
-fun takeLastPadStartWidth(text: String?, width: Int, padChar: Char = ' '): String {
+private fun takeLastPadStartWidth(text: String?, width: Int, padChar: Char = ' '): String {
     var textWidth = text?.takeLast(width).orEmpty()
     while (textWidth.width > width)
         textWidth = textWidth.drop(1)
@@ -860,7 +857,7 @@ fun takeLastPadStartWidth(text: String?, width: Int, padChar: Char = ' '): Strin
 /**
  * 문자열의 폭을 맞추기 위해 앞에 문자를 채워넣는다.
  */
-fun padStartWidth(text: String?, width: Int, padChar: Char = ' '): String {
+private fun padStartWidth(text: String?, width: Int, padChar: Char = ' '): String {
     val textWidth = text.orEmpty()
     return if (textWidth.width < width)
         textWidth.padStart(textWidth.length + width - textWidth.width, padChar)
@@ -868,9 +865,6 @@ fun padStartWidth(text: String?, width: Int, padChar: Char = ' '): String {
         textWidth
 }
 
-///////////////////////////////////////////////////////////////////////////
-// log print width align
-///////////////////////////////////////////////////////////////////////////
 val String?.`1` get() = takePadEndWidth("$this", 20)
 val Number?.`1` get() = takePadEndWidth("$this", 3)
 val Boolean?.`1` get() = takePadEndWidth("$this", 6)
@@ -881,24 +875,8 @@ fun Number?._pade(width: Int = 8) = takeLastPadStartWidth("$this", width)
 fun Boolean?._pad() = takeLastPadStartWidth("$this", 6)
 
 ///////////////////////////////////////////////////////////////////////////
-// toast log
-///////////////////////////////////////////////////////////////////////////
-var logToast: Toast? = null
-
-fun Log.toast(context: Context, vararg args: Any?, duration: Int = Toast.LENGTH_SHORT, priority: Int = VERBOSE) {
-    val text = args.joinToString(" ") { it.toString() }
-    ps(priority, firstStack(), text)
-    logToast = Toast.makeText(context, text, duration)
-        .also {
-            logToast?.cancel()
-            it.show()
-        }
-}
-
-///////////////////////////////////////////////////////////////////////////
 // dump
 ///////////////////////////////////////////////////////////////////////////
-@Suppress("FunctionName")
 fun ViewModel._DUMP() {
     val stack = Log.firstStack()
     val prefix = "=".repeat(50) + "\n" + "${javaClass.simpleName} ${hashCode().toString(16)}\n"
@@ -940,7 +918,7 @@ fun Intent?._DUMP() {
     }
 }
 
-fun Bundle?._DUMP(): Unit {
+fun Bundle?._DUMP() {
     val stack = Log.firstStack()
     Log.sbc {
         Log.ps(Log.DEBUG, stack, Log._DUMP(this))
@@ -950,7 +928,7 @@ fun Bundle?._DUMP(): Unit {
 
 fun Lifecycle._DUMP(): Unit = addObserver(object : LifecycleEventObserver {
     override fun onStateChanged(source: LifecycleOwner, event: Lifecycle.Event) {
-        Log.ps(Log.INFO, Log.firstStack(), "LifecycleChanged", source.javaClass.simpleName, event)
+        Log.ps(Log.DEBUG, Log.firstStack(), "LifecycleChanged", source.javaClass.simpleName, event)
     }
 })
 
@@ -1012,8 +990,11 @@ fun <T> T._onDump(stack: StackTraceElement = Log.firstStack()): T {
 
 
 ///////////////////////////////////////////////////////////////////////////
-// image
+// image dump
 ///////////////////////////////////////////////////////////////////////////
+private val timeText: String
+    get() = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.ENGLISH).format(Date())
+
 fun ByteArray._DUMP(name: String = "bytes") {
     val logDir = Log.FILE_LOG?.parentFile ?: return
     logDir.mkdirs()
@@ -1036,77 +1017,7 @@ fun Bitmap._DUMP(name: String = "bitmap") {
 }
 
 ///////////////////////////////////////////////////////////////////////////
-// internal util
-///////////////////////////////////////////////////////////////////////////
-private val timeText: String
-    get() = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.ENGLISH).format(Date())
-
-
-///////////////////////////////////////////////////////////////////////////
-// hex util
-///////////////////////////////////////////////////////////////////////////
-fun ByteArray?._toHex(): String = this
-    ?.joinToString("") { "%02x".format(it) }
-    ?: "!!byte[]"
-
-fun String?._toByteArray(): ByteArray = this
-    ?.zipWithNext { a, b -> "$a$b" }
-    ?.filterIndexed { index, _ -> index % 2 == 0 }
-    ?.map { it.toInt(16).toByte() }
-    ?.toByteArray()
-    ?: ByteArray(0)
-
-
-///////////////////////////////////////////////////////////////////////////
-// fcm -> json log
-///////////////////////////////////////////////////////////////////////////
-/**
- *if (BuildConfig.DEBUG) {
- *    sbc { Log.i(JsonLogger.toJson(remoteMessage)) }
- *    JsonLogger.createFile(applicationContext).flog(JsonLogger.toJson(remoteMessage))
- *}
- */
-object FcmLogger {
-    fun toJson(remoteMessage: RemoteMessage): String = remoteMessage.data.map {
-        kotlin.runCatching {
-            when {
-                it.value.startsWith("[") && it.value.endsWith("]") -> it.key to JSONArray(it.value)
-                it.value.startsWith("{") && it.value.endsWith("}") -> it.key to JSONObject(it.value)
-                else -> it.key to it.value
-            }
-        }.getOrDefault(it.key to it.value)
-    }.let {
-        JSONObject(it.toMap()).toString(2)
-    }
-
-    private lateinit var logFile: File
-    fun createFile(context: Context): FcmLogger {
-        logFile = File(context.filesDir, "push/push.md").also { it.parentFile?.mkdirs(); it.createNewFile() }
-        return this
-    }
-
-    fun flog(json: String): Job {
-        return CoroutineScope(Dispatchers.IO).launch {
-            appendTextActor().send(json)
-        }
-    }
-
-    @OptIn(ObsoleteCoroutinesApi::class)
-    fun CoroutineScope.appendTextActor() = actor<String> {
-        for (json in channel) {
-            logFile.appendText(
-                """```json
-                    |$json
-                    |```
-                    |
-                    |""".trimMargin()
-            )
-        }
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////
-// db
+// db dump
 ///////////////////////////////////////////////////////////////////////////
 fun Cursor?._DUMP(limit: Int = Int.MAX_VALUE): Unit = Log.sbc {
     val c = this ?: return@sbc
@@ -1126,5 +1037,46 @@ fun Cursor?._DUMP(limit: Int = Int.MAX_VALUE): Unit = Log.sbc {
             Log.d(dat.contentToString().trim('[', ']'))
         }
         c.moveToPosition(keep)
+    }
+}
+
+
+///////////////////////////////////////////////////////////////////////////
+// fcm -> json log
+///////////////////////////////////////////////////////////////////////////
+private fun RemoteMessage.toJson(): String = data.map {
+    kotlin.runCatching {
+        when {
+            it.value.startsWith("[") && it.value.endsWith("]") -> it.key to JSONArray(it.value)
+            it.value.startsWith("{") && it.value.endsWith("}") -> it.key to JSONObject(it.value)
+            else -> it.key to it.value
+        }
+    }.getOrDefault(it.key to it.value)
+}.let {
+    JSONObject(it.toMap()).toString(2)
+}
+
+@OptIn(ObsoleteCoroutinesApi::class)
+private fun CoroutineScope.appendTextActor() = actor<String> {
+    for (json in channel) {
+        logFile.appendText(
+            """```json
+            |$json
+            |```
+            |
+            |""".trimMargin()
+        )
+    }
+}
+
+fun RemoteMessage._DUMP() {
+    Log.d(toJson())
+}
+
+private lateinit var logFile: File
+fun RemoteMessage._DUMP(context: Context) {
+    logFile = File(context.filesDir, "push/push.md").also { it.parentFile?.mkdirs(); it.createNewFile() }
+    CoroutineScope(Dispatchers.IO).launch {
+        appendTextActor().send(toJson())
     }
 }
