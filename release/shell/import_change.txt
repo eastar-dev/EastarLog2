@@ -1,2 +1,0 @@
-import old\.your\.package\.name\.(BuildConfig|R|BR|databinding)
-import new.your.package.name.$1
