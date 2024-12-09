@@ -65,6 +65,4 @@ class EastarLog2TestApp {
         val text2 = "가1나23다라456마바아".repeat(300)
         Log.w(text2)
     }
-
-
 }
