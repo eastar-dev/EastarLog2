@@ -182,9 +182,10 @@ object Log {
 
     //methodName을 호출한 caller를 찾는다
     private fun getStackCaller(methodName: String): StackTraceElement {
-        val stackTraceElement = stack()
-        val methodIndex = stackTraceElement.indexOfLast { it.methodName == methodName }
-        return stackTraceElement.toList().getOrNull(methodIndex + 1) ?: stackTraceElement.last()
+        return stack().run {
+            val methodIndex = indexOfLast { it.methodName == methodName }
+            toList().getOrNull(methodIndex + 1) ?: lastOrNull() ?: StackTraceElement("?", "?", "?", 0)
+        }
     }
 
     @JvmStatic
