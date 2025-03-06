@@ -55,6 +55,15 @@ https://central.sonatype.com/artifact/dev.eastar/eastar-log
 
 #### [Add the dependency](/app/build.gradle.kts#L99-L102)
 
+```toml
+[versions]
+eastar-log = "2.5.0"
+
+[libraries]
+eastar-log = { module = "dev.eastar:eastar-log", version.ref = "eastar-log" }
+eastar-log-no-op = { module = "dev.eastar:eastar-log-no-op", version.ref = "eastar-log" }
+```
+
 ```kotlin
 dependencies {
     debugImplementation(libs.eastar.log)
