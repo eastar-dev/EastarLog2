@@ -5,6 +5,7 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.app.Application
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
@@ -17,13 +18,14 @@ import androidx.core.view.doOnPreDraw
 import java.lang.reflect.Method
 import kotlin.reflect.KClass
 
-fun Application.easterEgg(vararg easterEgg: KClass<*>) = registerActivityLifecycleCallbacks(
+fun Application.easterEgg(vararg easterEgg: KClass<*>): Unit = easterEgg(*easterEgg.map { it.java.name }.toTypedArray())
+fun Application.easterEgg(vararg easterEgg: String): Unit = registerActivityLifecycleCallbacks(
     EasterEggRunner(
-        *easterEgg.map { it.java.name }.toTypedArray()
+        *easterEgg
     )
 )
 
-class EasterEggRunner(
+internal class EasterEggRunner(
     private vararg val easterEggClzName: String
 ) : Application.ActivityLifecycleCallbacks {
     private var systemWindowInsetTop: Int = 0
@@ -54,7 +56,7 @@ class EasterEggRunner(
             }.getOrNull()
 
             @SuppressLint("SetTextI18n")
-            text = "$versionName $buildTime ver:$versionCode"
+            text = "$versionName[$versionCode] ${activity.javaClass.simpleName} $buildTime"
             tag = EASTER_EGG_VIEW_TAG
             setTextColor(0xffff0000.toInt())
             textSize = 9f // sp
@@ -126,8 +128,8 @@ class EasterEggRunner(
                     cast(activity)
                 }.onFailure {
                     val stack = Exception().stackTrace[0]
-                    val locator = String.format("(%s:%d)", stack.fileName, stack.lineNumber)
-                    android.util.Log.w("EasterEgg", "``$locator :: !${activity::class.java.name}를 ${parameterType.name}으로 변환할 수 없습니다.")
+                    val locator = "(%s:%d)".format(stack.fileName, stack.lineNumber)
+                    Log.w("EasterEgg", "``$locator :: !${activity::class.java.name}를 ${parameterType.name}으로 변환할 수 없습니다.")
                 }.getOrThrow()
             }
             .also {

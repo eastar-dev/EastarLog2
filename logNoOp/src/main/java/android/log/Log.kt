@@ -14,14 +14,27 @@
  * limitations under the License.
  */
 
-@file:Suppress("FunctionName", "unused", "MemberVisibilityCanBePrivate", "UNUSED_PARAMETER")
+@file:Suppress("FunctionName", "unused", "MemberVisibilityCanBePrivate", "ObjectPropertyName", "DEPRECATION", "UNCHECKED_CAST", "PackageDirectoryMismatch", "UnusedReceiverParameter", "RemoveRedundantQualifierName")
 
 package android.log
 
-import android.app.Application
+import android.app.Activity
+import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
+import android.database.Cursor
+import android.graphics.Bitmap
+import android.log.Log.firstStack
 import android.net.Uri
+import android.os.Bundle
+import android.view.MotionEvent
+import android.view.View
+import android.widget.Toast
 import androidx.annotation.VisibleForTesting
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
 import java.io.File
 
 /** @author eastar*/
@@ -34,22 +47,10 @@ object Log {
     const val ASSERT = android.util.Log.ASSERT
 
     @JvmField
-    var LOG = false
-
-    @JvmField
-    var LOG_SYSOUT = false
+    var LOG = true
 
     @JvmField
     var FILE_LOG: File? = null
-
-    @JvmField
-    var START = android.util.Log.DEBUG
-
-    @JvmField
-    var LIFECYCLE_CREATE = android.util.Log.DEBUG
-
-    @JvmField
-    var LIFECYCLE_DESTROYED = android.util.Log.DEBUG
 
     @JvmField
     var PREFIX = "``"
@@ -58,19 +59,10 @@ object Log {
     var PREFIX_MULTILINE: String = "$PREFIX▼"
 
     @JvmField
-    var TAG_WIDTH = 34
-
-    @JvmField
-    var LOCATOR_WIDTH = 40
+    var PREFIX_WIDTH = 30
 
     @JvmField
     var MAX_LOG_LINE_BYTE_SIZE = 3600
-
-    @JvmField
-    var defaultLogFilterClassNameRegex: Regex = "".toRegex()
-
-    @JvmField
-    var NOT_REGEX: Regex = "".toRegex()
 
     @JvmField
     var NOT_PREDICATE: (StackTraceElement) -> Boolean = { false }
@@ -84,8 +76,15 @@ object Log {
     @JvmStatic
     fun getClzName(stack: StackTraceElement): String = ""
 
-    @JvmStatic
-    fun stack(): StackTraceElement = StackTraceElement("", "", "", 0)
+    fun stack(): Sequence<StackTraceElement> = emptySequence()
+
+    internal fun firstStack(): StackTraceElement = StackTraceElement("", "", "", 0)
+
+    internal fun _DUMP(intent: Intent?): String = ""
+
+    internal fun _DUMP(bundle: Bundle?): String = ""
+
+    internal fun _arrayToString(array: Any): String = ""
 
     @JvmStatic
     fun pm(priority: Int, method: String, vararg args: Any?): Int = 0
@@ -114,40 +113,42 @@ object Log {
     // case by log
     ///////////////////////////////////////////////////////////////////////////
     @JvmStatic
-    fun obj(o: Any?): String = ""
+    fun obj(o: Any?): Unit = Unit
 
-    fun debounce(vararg args: Any?) = Unit
-
-    @JvmStatic
-    fun clz(clz: Class<*>) = Unit
-
-    fun provider(context: Context, uri: Uri?) = Unit
-
-    fun divider(vararg args: Any?) = Unit
-    fun sbc(vararg args: Any?, action: (Any?) -> Unit) = Unit
-    fun toast(vararg args: Any?) = Unit
-
+    fun debounce(vararg args: Any?): Unit = Unit
 
     @JvmStatic
-    fun tic_s(vararg args: Any? = arrayOf("")) = Unit
+    fun clz(clz: Class<*>): Unit = Unit
+
+
+    fun provider(context: Context, uri: Uri?): Unit = Unit
+
+    fun divider(stack: StackTraceElement = firstStack()): Unit = Unit
+
+    fun sbc(stack: StackTraceElement = firstStack(), block: () -> Unit): Unit = Unit
+
+    fun toast(context: Context, vararg args: Any?, duration: Int = Toast.LENGTH_SHORT, priority: Int = VERBOSE): Unit = Unit
 
     @JvmStatic
-    fun tic(vararg args: Any? = arrayOf("")) = Unit
+    fun tic_s(vararg args: Any? = arrayOf("")): Unit = Unit
+
+    @JvmStatic
+    fun tic(vararg args: Any? = arrayOf("")): Unit = Unit
 
     //flog
     @JvmStatic
-    fun flog(vararg args: Any?) = Unit
+    fun flog(vararg args: Any?): Unit = Unit
 
     @VisibleForTesting
     @JvmStatic
-    fun println(vararg args: Any?) = Unit
+    fun println(vararg args: Any?): Unit = Unit
 
     @JvmOverloads
     @JvmStatic
-    fun printStackTrace(th: Throwable = Throwable()) = Unit
+    fun printStackTrace(th: Throwable = Throwable()): Unit = Unit
 
     @JvmStatic
-    fun simplePrintStackTrace() = Unit
+    fun simplePrintStackTrace(): Unit = Unit
 
     /////////////////////////////////////////////////////////////////////////////
     //over lap func
@@ -178,22 +179,82 @@ object Log {
 
     @JvmStatic
     fun getStackTraceString(th: Throwable): String = ""
+
+    ///////////////////////////////////////////////////////////////////////////
+    // etc 없어질것
+    ///////////////////////////////////////////////////////////////////////////
+    @JvmStatic
+    fun viewTree(parent: View, depth: Int = 0): Unit = Unit
+
+    fun measure(widthMeasureSpec: Int, heightMeasureSpec: Int): Unit = Unit
+
+    @JvmStatic
+    fun onTouchEvent(event: MotionEvent): Unit = Unit
+
 }
 
-val String?.singleLog: String get() = ""
+///////////////////////////////////////////////////////////////////////////
+// ktx
+///////////////////////////////////////////////////////////////////////////
+val String?.singleLog: String
+    get() = ""
 
 ///////////////////////////////////////////////////////////////////////////
-// log print width align
+// 로그 간격
 ///////////////////////////////////////////////////////////////////////////
-val Any?.`1` get() = ""
-fun Any?._pad(width: Int = 0) = ""
-fun Any?._pads(width: Int = 0) = ""
-fun Any?._pade(width: Int = 0) = ""
+
+val String?.`1`: String get() = ""
+val Number?.`1`: String get() = ""
+val Boolean?.`1`: String get() = ""
+fun String?._pad(width: Int = 20): String = ""
+fun String?._pads(width: Int = 20): String = ""
+fun Number?._pad(width: Int = 3): String = ""
+fun Number?._pade(width: Int = 8): String = ""
+fun Boolean?._pad(): String = ""
 
 ///////////////////////////////////////////////////////////////////////////
-// Log Ktx
+// dump
 ///////////////////////////////////////////////////////////////////////////
-fun Any?._DUMP(vararg args: Any?) = Unit
-fun <T> T._onDump(stack: Any? = null): T = this
+fun ViewModel._DUMP(): Unit = Unit
+fun Activity._DUMP(): Unit = Unit
 
-fun Application.logLifeCycle() = Unit
+fun Fragment._DUMP(): Unit = Unit
+
+fun Intent?._DUMP(): Unit = Unit
+
+fun Bundle?._DUMP(): Unit = Unit
+
+
+fun Lifecycle._DUMP(): Unit = Unit
+
+fun SavedStateHandle._DUMP(): Unit = Unit
+
+fun ContentValues._DUMP(): Unit = Unit
+
+fun <T> T._onDump(stack: StackTraceElement = firstStack()): T = this
+
+///////////////////////////////////////////////////////////////////////////
+// image dump
+///////////////////////////////////////////////////////////////////////////
+fun ByteArray._DUMP(name: String = "bytes"): Unit = Unit
+
+fun Bitmap._DUMP(name: String = "bitmap"): Unit = Unit
+
+///////////////////////////////////////////////////////////////////////////
+// db dump
+///////////////////////////////////////////////////////////////////////////
+fun Cursor?._DUMP(limit: Int = Int.MAX_VALUE): Unit = Unit
+
+fun File.writeADBLogs(): Unit = Unit
+
+fun Long.yyyymmdd(): String = ""
+
+///////////////////////////////////////////////////////////////////////////
+// Internal extension functions
+///////////////////////////////////////////////////////////////////////////
+internal fun String.splitSafe(lengthByte: Int): List<String> = listOf(this)
+
+internal fun ByteArray.takeSafe(lengthByte: Int, startOffset: Int): String = ""
+
+internal fun String.takeSafe(lengthByte: Int, startOffset: Int = 0): String = ""
+

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-@file:Suppress("FunctionName", "unused", "MemberVisibilityCanBePrivate", "ObjectPropertyName", "DEPRECATION", "UNCHECKED_CAST")
+@file:Suppress("FunctionName", "unused", "MemberVisibilityCanBePrivate", "ObjectPropertyName", "DEPRECATION", "UNCHECKED_CAST", "PackageDirectoryMismatch", "RedundantUnitReturnType")
 
 package android.log
 
@@ -46,14 +46,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import com.google.firebase.messaging.RemoteMessage
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ObsoleteCoroutinesApi
-import kotlinx.coroutines.channels.actor
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -90,34 +84,16 @@ object Log {
     var FILE_LOG: File? = null
 
     @JvmField
-    var START = android.util.Log.DEBUG
-
-    @JvmField
-    var LIFECYCLE_CREATE = android.util.Log.DEBUG
-
-    @JvmField
-    var LIFECYCLE_DESTROYED = android.util.Log.DEBUG
-
-    @JvmField
     var PREFIX = "``"
 
     @JvmField
     var PREFIX_MULTILINE: String = "$PREFIX▼"
 
     @JvmField
-    var TAG_WIDTH = 34
-
-    @JvmField
-    var LOCATOR_WIDTH = 40
-
-    @JvmField
     var PREFIX_WIDTH = 30
 
     @JvmField
     var MAX_LOG_LINE_BYTE_SIZE = 3600
-
-    @JvmField
-    var NOT_REGEX: Regex = "".toRegex()
 
     @JvmField
     var NOT_PREDICATE: (StackTraceElement) -> Boolean = { false }
@@ -131,44 +107,21 @@ object Log {
     @JvmStatic
     fun getClzName(stack: StackTraceElement): String = runCatching { stack.className.takeLastWhile { it != '.' } }.getOrDefault(stack.className)
 
-    fun stack() = Throwable().stackTrace
+    fun stack(): Sequence<StackTraceElement> = Throwable().stackTrace
         .asSequence()
-        .filterNot {
-            it.fileName == null
-        }
-        .filterNot {
-            it.lineNumber <= 0
-        }
-        .filterNot {
-            it.fileName.endsWith("Log.kt")
-        }
-        .filterNot {
-            it.methodName.endsWith("_onDump")
-        }
-        .filterNot {
-            it.methodName.endsWith("_DUMP")
-        }
-        .filterNot {
-            it.className.startsWith("androidx.")
-        }
-        .filterNot {
-            it.className.startsWith("android.")
-        }
-        .filterNot {
-            it.className.startsWith("com.android.")
-        }
-        .filterNot {
-            it.className.startsWith("kotlinx.")
-        }
-        .filterNot {
-            it.className.startsWith("kotlin.")
-        }
-        .filterNot {
-            it.className.startsWith("io.reactivex.")
-        }
-        .filterNot(NOT_PREDICATE)
-        .filterNot {
-            NOT_REGEX.matches(it.className)
+        .filterNot { it.fileName == null }
+        .filterNot { it.lineNumber <= 0 }
+        .filterNot { it.fileName.endsWith("Log.kt") }
+        .let { base ->
+            base
+                .filterNot { it.className.startsWith("androidx.") }
+                .filterNot { it.className.startsWith("android.") }
+                .filterNot { it.className.startsWith("com.android.") }
+                .filterNot { it.className.startsWith("kotlinx.") }
+                .filterNot { it.className.startsWith("kotlin.") }
+                .filterNot { it.className.startsWith("io.reactivex.") }
+                .filterNot(NOT_PREDICATE)
+                .ifEmpty { sequenceOf(base.first()) }
         }
 
     internal fun firstStack(): StackTraceElement = stack().first()
@@ -309,12 +262,12 @@ object Log {
         intent ?: return "null_Intent"
         //@formatter:off
         return (intent.component?.className ?: intent.toUri(0)) +
-            intent.action.ifNotBlank { "\nAction    $it" } +
-            intent.data  .ifNotBlank { "\nData      $it" } +
-            intent.type  .ifNotBlank { "\nType      $it" } +
-            intent.scheme.ifNotBlank { "\nScheme    $it" } +
-            intent.flags .ifNotBlank { "\nFlags     ${_DUMP_IntentFlags(it)}" } +
-            intent.extras.ifNotBlank { "\nextra\n${_DUMP(intent.extras)}" }
+                intent.action.ifNotBlank { "\nAction    $it" } +
+                intent.data  .ifNotBlank { "\nData      $it" } +
+                intent.type  .ifNotBlank { "\nType      $it" } +
+                intent.scheme.ifNotBlank { "\nScheme    $it" } +
+                intent.flags .ifNotBlank { "\nFlags     ${_DUMP_IntentFlags(it)}" } +
+                intent.extras.ifNotBlank { "\nextra\n${_DUMP(intent.extras)}" }
         //@formatter:on
     }
 
@@ -413,11 +366,11 @@ object Log {
     // case by log
     ///////////////////////////////////////////////////////////////////////////
     @JvmStatic
-    fun obj(o: Any?) {
+    fun obj(o: Any?): Unit {
         d(obj("", o, HashSet()))
     }
 
-    private fun obj(k: String, v: Any?, duplication: MutableSet<Any>): String = kotlin.runCatching {
+    private fun obj(k: String, v: Any?, duplication: MutableSet<Any>): String = runCatching {
         if (v == null) {
             "$k:null\n"
         } else if (v.javaClass.isArray) {
@@ -445,7 +398,7 @@ object Log {
 
     private var lastMillis: Long = 0
 
-    fun debounce(vararg args: Any?) {
+    fun debounce(vararg args: Any?): Unit {
         if (!LOG) return
         if (lastMillis > System.currentTimeMillis() - TimeUnit.SECONDS.toMillis(1))
             return
@@ -455,7 +408,7 @@ object Log {
 
 
     @JvmStatic
-    fun clz(clz: Class<*>) {
+    fun clz(clz: Class<*>): Unit {
         if (!LOG) return
         e(clz)
         //@formatter:off
@@ -482,7 +435,7 @@ object Log {
     }
 
 
-    fun provider(context: Context, uri: Uri?) {
+    fun provider(context: Context, uri: Uri?): Unit {
         if (!LOG) return
 
         if (uri == null) {
@@ -492,11 +445,11 @@ object Log {
         context.contentResolver.query(uri, null, null, null, null).use { it._DUMP(100) }
     }
 
-    fun divider(stack: StackTraceElement = firstStack()) {
+    fun divider(stack: StackTraceElement = firstStack()): Unit {
         ps(VERBOSE, stack, "=".repeat(50))
     }
 
-    fun sbc(stack: StackTraceElement = firstStack(), block: () -> Unit) {
+    fun sbc(stack: StackTraceElement = firstStack(), block: () -> Unit): Unit {
         ps(VERBOSE, stack, "=".repeat(50))
         block()
         ps(WARN, stack, "=".repeat(50))
@@ -505,7 +458,7 @@ object Log {
     //toast
     private var logToast: Toast? = null
 
-    fun toast(context: Context, vararg args: Any?, duration: Int = Toast.LENGTH_SHORT, priority: Int = VERBOSE) {
+    fun toast(context: Context, vararg args: Any?, duration: Int = Toast.LENGTH_SHORT, priority: Int = VERBOSE): Unit {
         val text = args.joinToString(" ") { it.toString() }
         ps(priority, firstStack(), text)
         logToast = Toast.makeText(context, text, duration)
@@ -519,7 +472,7 @@ object Log {
     private var ticTimer = 0L
 
     @JvmStatic
-    fun tic_s(vararg args: Any? = arrayOf("")) {
+    fun tic_s(vararg args: Any? = arrayOf("")): Unit {
         if (!LOG) return
         synchronized(this) {
             ticTimer = System.currentTimeMillis()
@@ -528,7 +481,7 @@ object Log {
     }
 
     @JvmStatic
-    fun tic(vararg args: Any? = arrayOf("")) {
+    fun tic(vararg args: Any? = arrayOf("")): Unit {
         if (!LOG) return
         synchronized(this) {
             val e = System.currentTimeMillis()
@@ -541,7 +494,7 @@ object Log {
 
     //flog
     @JvmStatic
-    fun flog(vararg args: Any?) {
+    fun flog(vararg args: Any?): Unit {
         FILE_LOG ?: return
         runCatching {
             val info = firstStack()
@@ -563,7 +516,7 @@ object Log {
 
     @VisibleForTesting
     @JvmStatic
-    fun println(vararg args: Any?) {
+    fun println(vararg args: Any?): Unit {
         if (!LOG) return
 
         val stack = firstStack()
@@ -587,13 +540,13 @@ object Log {
 
     @JvmOverloads
     @JvmStatic
-    fun printStackTrace(th: Throwable = Throwable()) {
+    fun printStackTrace(th: Throwable = Throwable()): Unit {
         if (!LOG) return
         w(android.util.Log.getStackTraceString(th))
     }
 
     @JvmStatic
-    fun simplePrintStackTrace() {
+    fun simplePrintStackTrace(): Unit {
         val stackTraceElements = stack()
         val first = stackTraceElements.firstOrNull() ?: stackTraceElements.first()
         val log = stackTraceElements.joinToString("\n") {
@@ -667,7 +620,7 @@ object Log {
     // etc 없어질것
     ///////////////////////////////////////////////////////////////////////////
     @JvmStatic
-    fun viewTree(parent: View, depth: Int = 0) {
+    fun viewTree(parent: View, depth: Int = 0): Unit {
         if (!LOG) return
 
         if (parent !is ViewGroup) {
@@ -711,7 +664,7 @@ object Log {
         return out.toString()
     }
 
-    fun measure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+    fun measure(widthMeasureSpec: Int, heightMeasureSpec: Int): Unit {
         if (!LOG) return
         val widthMode = MeasureSpec.getMode(widthMeasureSpec)
         val widthSize = MeasureSpec.getSize(widthMeasureSpec)
@@ -724,13 +677,13 @@ object Log {
     private var LAST_ACTION_MOVE: Long = 0
 
     @JvmStatic
-    fun onTouchEvent(event: MotionEvent) {
+    fun onTouchEvent(event: MotionEvent): Unit {
         if (!LOG) return
         runCatching {
             val action = event.action and MotionEvent.ACTION_MASK
             if (action == MotionEvent.ACTION_MOVE) {
                 val nanoTime = System.nanoTime()
-                if (nanoTime - LAST_ACTION_MOVE < 1000000) return
+                if (nanoTime - LAST_ACTION_MOVE < 1000000) return@runCatching // explicit return from lambda
                 LAST_ACTION_MOVE = nanoTime
             }
             e(event)
@@ -789,7 +742,7 @@ object Log {
             String(this, offset, position - offset)
     }
 
-    internal fun String.takeSafe(lengthByte: Int, startOffset: Int = 0) = toByteArray().takeSafe(lengthByte, startOffset)
+    internal fun String.takeSafe(lengthByte: Int, startOffset: Int = 0): String = toByteArray().takeSafe(lengthByte, startOffset)
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -808,7 +761,8 @@ val String?.singleLog: String
 ///////////////////////////////////////////////////////////////////////////
 // 로그 간격
 ///////////////////////////////////////////////////////////////////////////
-private val String.width get() = toByteArray(Charset.forName("euc-kr")).size
+private val String.width: Int
+    get() = toByteArray(Charset.forName("euc-kr")).size
 
 /**
  * 강제로 문자열의 폭을 맞추기 위해 뒤에 문자를 채워넣는다.
@@ -866,19 +820,19 @@ private fun padStartWidth(text: String?, width: Int, padChar: Char = ' '): Strin
         textWidth
 }
 
-val String?.`1` get() = takePadEndWidth("$this", 20)
-val Number?.`1` get() = takePadEndWidth("$this", 3)
-val Boolean?.`1` get() = takePadEndWidth("$this", 6)
-fun String?._pad(width: Int = 20) = takePadEndWidth("$this", width)
-fun String?._pads(width: Int = 20) = takeLastPadStartWidth("$this", width)
-fun Number?._pad(width: Int = 3) = takePadEndWidth("$this", width)
-fun Number?._pade(width: Int = 8) = takeLastPadStartWidth("$this", width)
-fun Boolean?._pad() = takeLastPadStartWidth("$this", 6)
+val String?.`1`: String get() = takePadEndWidth("$this", 20)
+val Number?.`1`: String get() = takePadEndWidth("$this", 3)
+val Boolean?.`1`: String get() = takePadEndWidth("$this", 6)
+fun String?._pad(width: Int = 20): String = takePadEndWidth("$this", width)
+fun String?._pads(width: Int = 20): String = takeLastPadStartWidth("$this", width)
+fun Number?._pad(width: Int = 3): String = takePadEndWidth("$this", width)
+fun Number?._pade(width: Int = 8): String = takeLastPadStartWidth("$this", width)
+fun Boolean?._pad(): String = takeLastPadStartWidth("$this", 6)
 
 ///////////////////////////////////////////////////////////////////////////
 // dump
 ///////////////////////////////////////////////////////////////////////////
-fun ViewModel._DUMP() {
+fun ViewModel._DUMP(): Unit {
     val stack = Log.firstStack()
     val prefix = "=".repeat(50) + "\n" + "${javaClass.simpleName} ${hashCode().toString(16)}\n"
     val postfix = "\n" + "=".repeat(50)
@@ -912,14 +866,14 @@ fun Activity._DUMP(): Unit = intent._DUMP()
 
 fun Fragment._DUMP(): Unit = arguments._DUMP()
 
-fun Intent?._DUMP() {
+fun Intent?._DUMP(): Unit {
     val stack = Log.firstStack()
     Log.sbc {
         Log.ps(Log.DEBUG, stack, Log._DUMP(this))
     }
 }
 
-fun Bundle?._DUMP() {
+fun Bundle?._DUMP(): Unit {
     val stack = Log.firstStack()
     Log.sbc {
         Log.ps(Log.DEBUG, stack, Log._DUMP(this))
@@ -954,12 +908,12 @@ fun ContentValues._DUMP(): Unit = Log.sbc {
     }
 }
 
-fun <T> T._onDump(stack: StackTraceElement = Log.firstStack()): T {
-    val result = when (this) {
+fun <T> T._onDump(stack: StackTraceElement = Log.firstStack()): T = also {
+    when (this) {
         is Flow<*> -> {
             onEach {
                 it._onDump(stack)
-            } as T
+            }
         }
 
         is List<*> -> {
@@ -973,20 +927,17 @@ fun <T> T._onDump(stack: StackTraceElement = Log.firstStack()): T {
                 it._onDump(stack)
             }.onFailure {
                 it._onDump(stack)
-            } as T
+            }
         }
 
         is Throwable -> {
             Log.ps(Log.WARN, stack, this)
-            this
         }
 
         else -> {
             Log.ps(Log.DEBUG, stack, this)
-            this
         }
     }
-    return result
 }
 
 
@@ -996,7 +947,7 @@ fun <T> T._onDump(stack: StackTraceElement = Log.firstStack()): T {
 private val timeText: String
     get() = SimpleDateFormat("yyyyMMdd_HHmmss_SSS", Locale.ENGLISH).format(Date())
 
-fun ByteArray._DUMP(name: String = "bytes") {
+fun ByteArray._DUMP(name: String = "bytes"): Unit {
     val logDir = Log.FILE_LOG?.parentFile ?: return
     logDir.mkdirs()
     logDir.canWrite()
@@ -1004,7 +955,7 @@ fun ByteArray._DUMP(name: String = "bytes") {
     File(logDir, "${name}_$timeText.jpg").writeBytes(this)
 }
 
-fun Bitmap._DUMP(name: String = "bitmap") {
+fun Bitmap._DUMP(name: String = "bitmap"): Unit {
     val logDir = Log.FILE_LOG?.parentFile ?: return
     logDir.mkdirs()
     logDir.canWrite()
@@ -1041,43 +992,10 @@ fun Cursor?._DUMP(limit: Int = Int.MAX_VALUE): Unit = Log.sbc {
     }
 }
 
-
-///////////////////////////////////////////////////////////////////////////
-// fcm -> json log
-///////////////////////////////////////////////////////////////////////////
-private fun RemoteMessage.toJson(): String = data.map {
-    kotlin.runCatching {
-        when {
-            it.value.startsWith("[") && it.value.endsWith("]") -> it.key to JSONArray(it.value)
-            it.value.startsWith("{") && it.value.endsWith("}") -> it.key to JSONObject(it.value)
-            else -> it.key to it.value
-        }
-    }.getOrDefault(it.key to it.value)
-}.let {
-    JSONObject(it.toMap()).toString(2)
-}
-
-@OptIn(ObsoleteCoroutinesApi::class)
-private fun CoroutineScope.appendTextActor() = actor<String> {
-    for (json in channel) {
-        logFile.appendText(
-            """```json
-            |$json
-            |```
-            |
-            |""".trimMargin()
-        )
+fun File.writeADBLogs(): Unit {
+    FileOutputStream(this, true).use {
+        Runtime.getRuntime().exec("logcat -d").inputStream.copyTo(it)
     }
 }
 
-fun RemoteMessage._DUMP() {
-    Log.d(toJson())
-}
-
-private lateinit var logFile: File
-fun RemoteMessage._DUMP(context: Context) {
-    logFile = File(context.filesDir, "push/push.md").also { it.parentFile?.mkdirs(); it.createNewFile() }
-    CoroutineScope(Dispatchers.IO).launch {
-        appendTextActor().send(toJson())
-    }
-}
+fun Long.yyyymmdd(): String = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date(this))
