@@ -57,7 +57,7 @@ https://central.sonatype.com/artifact/dev.eastar/eastar-log
 
 ```toml
 [versions]
-eastar-log = "2.5.0"
+eastar-log = "2.5.1"
 
 [libraries]
 eastar-log = { module = "dev.eastar:eastar-log", version.ref = "eastar-log" }

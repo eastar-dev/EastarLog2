@@ -92,11 +92,11 @@ android {
     }
 }
 
-dependencies {
-    debugImplementation(project(":log"))
-    releaseImplementation(project(":logNoOp"))
-}
 //dependencies {
-//    debugImplementation(libs.eastar.log)
-//    releaseImplementation(libs.eastar.log.no.op)
+//    debugImplementation(project(":log"))
+//    releaseImplementation(project(":logNoOp"))
 //}
+dependencies {
+    debugImplementation(libs.eastar.log)
+    releaseImplementation(libs.eastar.log.no.op)
+}

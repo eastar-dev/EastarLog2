@@ -24,7 +24,7 @@ vankiktechMaven = "0.30.0"
 compose-android = "1.7.4"
 material3 = "1.3.0"
 #######################################################################################################
-eastar-log = "2.5.0"
+eastar-log = "2.5.1"
 
 [libraries]
 androidx-core = { group = "androidx.core", name = "core-ktx", version.ref = "core" }
