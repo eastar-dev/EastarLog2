@@ -1,5 +1,3 @@
-import com.vanniktech.maven.publish.SonatypeHost
-
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
@@ -53,7 +51,7 @@ dependencies {
  */
 mavenPublishing {
     //https://central.sonatype.com/를 사용하는 Central Portal로 배포
-    publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL)
+    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
 
     // 모든 배포에 대해 GPG 서명 활성화
     signAllPublications()

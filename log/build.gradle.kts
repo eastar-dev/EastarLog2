@@ -45,10 +45,17 @@ dependencies {
  *
  * import com.vanniktech.maven.publish.SonatypeHost
  *
+ * 배포확인위치
+ * https://central.sonatype.com/artifact/dev.eastar/eastar-log
+ *
  * 배포
  * ./gradlew publishAndReleaseToMavenCentral --no-configuration-cache
  * 확인
  * https://repo1.maven.org/maven2/dev/eastar/eastar-log/2.5.0/
+ *
+ * 배포방법
+ * Tasks > publiching > publishAllPublicationsToMavenCentralRepository 눌러서 실행
+ * https://central.sonatype.com/publishing 가서 배포 버튼 눌러야 함
  */
 mavenPublishing {
     // 기본 Maven Central로 배포

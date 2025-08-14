@@ -1,5 +1,3 @@
-[![Release](https://jitpack.io/v/eastar-dev/EastarLog2.svg)](https://jitpack.io/#eastar-dev/EastarLog2)
-
 ## What different EastarLog2?
 
 android.log.Log is more smart, powerfull then android.util.Log
@@ -7,52 +5,74 @@ Android developers often need to logcat.
 So I made it.
 
 ### log pretty output at JSON, XML another .... ?
-android.log.Log help you'r project tracking find bug.
 
-### log quick setting you'r project
-just replace all 
-```kotlin
-'import android.util.Log' -> 'import android.log.Log'
-```
+android.log.Log help you're project tracking find bug.
+
+### log quick setting you're project
+
+just replace all
+
+    ```kotlin
+        import android.util.Log -> import android.log.Log
+    ```
+
 just it!
 
+### [log show or hide](/log/src/main/java/android/log/Log.kt#L87) _option_
 
-### log show or hide?
-```java
-	public static boolean LOG = BuildConfig.DEBUG;
-```
-https://github.com/eastar-dev/log/blob/master/log/src/main/java/android/log/Log.java#L73
+    ```kotlin
+        @JvmField
+        var LOG = true
+    ```
 
+### [log prefix](/log/src/main/java/android/log/Log.kt#L105) _option_
 
+    ```kotlin
+        @JvmField
+        var PREFIX = "``"
+    ```
+
+### [log skip](/log/src/main/java/android/log/Log.kt#L119-L123) _option_
+
+    ```kotlin
+        @JvmField
+        var NOT_REGEX: Regex = "".toRegex()
+    
+        @JvmField
+        var NOT_PREDICATE: (StackTraceElement) -> Boolean = { false }
+    ```
 
 ## What's new?
-add LActivity, LFragment
-add LifeCycleLog.kt
-supported android studio 3.5.x ~ 4.0.x
 
-
+1. add [LogLifeCycle.kt](log/src/main/java/android/log/LogLifeCycle.kt)
+2. supported Android Studio 3.5.x ~ Android Studio Ladybug | 2024.2.1 Patch 3
 
 ## How...
 
-### Gradle with jitpack
+### Publishing Central Portal
 
-#### Add it in your root build.gradle at the end of repositories:
-```javascript
-allprojects {
-	repositories {
-		...
-		maven { url 'https://jitpack.io' }
-	}
-}
+https://central.sonatype.com/artifact/dev.eastar/eastar-log
+
+#### [Add the dependency](/app/build.gradle.kts#L99-L102)
+
+```toml
+[versions]
+eastar-log = "2.5.1"
+
+[libraries]
+eastar-log = { module = "dev.eastar:eastar-log", version.ref = "eastar-log" }
+eastar-log-no-op = { module = "dev.eastar:eastar-log-no-op", version.ref = "eastar-log" }
 ```
-#### Add the dependency
-```javascript
+
+```kotlin
 dependencies {
-        implementation 'com.github.eastar-dev:EastarLog2:2.0.0'
+    debugImplementation(libs.eastar.log)
+    releaseImplementation(libs.eastar.log.no.op)
 }
 ```
 
-## License 
+## License
+
  ```code
 Copyright 2017 eastar Jeong
 
