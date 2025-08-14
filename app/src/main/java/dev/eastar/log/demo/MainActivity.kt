@@ -56,8 +56,6 @@ class MainActivity : ComponentActivity() {
                 text = "Migration log with classname filter"
                 setOnClickListener {
                     //way 1
-                    Log.NOT_REGEX = "${LoggerMigration::class.java.name}".toRegex()
-                    //way 2
                     Log.NOT_PREDICATE = {
                         // Custom logging filter
                         false

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-@file:Suppress("FunctionName", "unused", "MemberVisibilityCanBePrivate", "ObjectPropertyName", "DEPRECATION", "UNCHECKED_CAST", "PackageDirectoryMismatch", "RedundantUnitReturnType")
+@file:Suppress("FunctionName", "unused", "NestedLambdaShadowedImplicitParameter", "RedundantUnitReturnType", "PackageDirectoryMismatch")
 
 package android.log
 
@@ -123,6 +123,7 @@ object Log {
                 .filterNot(NOT_PREDICATE)
                 .ifEmpty { sequenceOf(base.first()) }
         }
+
 
     internal fun firstStack(): StackTraceElement = stack().first()
 
@@ -761,8 +762,7 @@ val String?.singleLog: String
 ///////////////////////////////////////////////////////////////////////////
 // 로그 간격
 ///////////////////////////////////////////////////////////////////////////
-private val String.width: Int
-    get() = toByteArray(Charset.forName("euc-kr")).size
+private val String.width: Int get() = toByteArray(Charset.forName("euc-kr")).size
 
 /**
  * 강제로 문자열의 폭을 맞추기 위해 뒤에 문자를 채워넣는다.
@@ -820,9 +820,6 @@ private fun padStartWidth(text: String?, width: Int, padChar: Char = ' '): Strin
         textWidth
 }
 
-val String?.`1`: String get() = takePadEndWidth("$this", 20)
-val Number?.`1`: String get() = takePadEndWidth("$this", 3)
-val Boolean?.`1`: String get() = takePadEndWidth("$this", 6)
 fun String?._pad(width: Int = 20): String = takePadEndWidth("$this", width)
 fun String?._pads(width: Int = 20): String = takeLastPadStartWidth("$this", width)
 fun Number?._pad(width: Int = 3): String = takePadEndWidth("$this", width)
@@ -908,6 +905,7 @@ fun ContentValues._DUMP(): Unit = Log.sbc {
     }
 }
 
+@Suppress("UnusedFlow")
 fun <T> T._onDump(stack: StackTraceElement = Log.firstStack()): T = also {
     when (this) {
         is Flow<*> -> {

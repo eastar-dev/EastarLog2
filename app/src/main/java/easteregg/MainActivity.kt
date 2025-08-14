@@ -1,4 +1,0 @@
-package easteregg
-
-class MainActivity {
-}

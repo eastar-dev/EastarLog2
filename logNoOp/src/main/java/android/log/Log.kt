@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-@file:Suppress("FunctionName", "unused", "MemberVisibilityCanBePrivate", "ObjectPropertyName", "DEPRECATION", "UNCHECKED_CAST", "PackageDirectoryMismatch", "UnusedReceiverParameter", "RemoveRedundantQualifierName")
+@file:Suppress("FunctionName", "unused", "UnusedReceiverParameter")
 
 package android.log
 
@@ -203,9 +203,6 @@ val String?.singleLog: String
 // 로그 간격
 ///////////////////////////////////////////////////////////////////////////
 
-val String?.`1`: String get() = ""
-val Number?.`1`: String get() = ""
-val Boolean?.`1`: String get() = ""
 fun String?._pad(width: Int = 20): String = ""
 fun String?._pads(width: Int = 20): String = ""
 fun Number?._pad(width: Int = 3): String = ""
